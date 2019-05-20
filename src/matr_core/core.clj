@@ -33,7 +33,14 @@
                                                   :db/cardinality :db.cardinality/many}
              :matr/kind {:db/type :db.type/keyword
                          :db/cardinality :db.cardinality/one}})
-(def db (d/create-conn schema))
+
+(defn make-initial-db []
+  (let [conn (d/create-conn schema)]
+    (d/transact! conn [{:matr/kind :matr.kind/box}])
+    conn))
+
+(def conn (make-initial-db))
+
 
 (defn make-example-db []
   (let [db (d/create-conn schema)]
@@ -48,21 +55,24 @@
                         :matr.node/source "axioms"}]}])
     db))
 
-(defn make-initial-db []
-  (let [db (d/create-conn schema)]
-    (d/transact! db [{:matr/kind :matr.kind/box}])
-    db))
-
 ;;; Pure functions over db
 
-(defn db-nodes-query [db boxid formulas]
+(def db-rootbox-query
+  "Find the entity id of the box without any parent."
+  (partial d/q '[:find ?rb . :in $ :where
+                 [?rb :matr/kind :matr.kind/box]
+                 [(missing? $ ?rb :matr.box/parent)]]))
+
+(defn db-nodes-query
+  "Find nodes in a given box by their formula.
+
+  Returns a map from formula to node for nodes which were found in the
+  box."
+  [db boxid formulas]
   (->> (d/q '{:find [?formula ?e]
               :in [$ ?box [?formula ...]]
-              :where [[?e :matr.node/parent ?box]
-                      [?e :matr.node/formula ?formula]]}
-            db
-            boxid
-            formulas)
+              :where [[?e :matr.node/parent ?box] [?e :matr.node/formula ?formula]]}
+            db boxid formulas)
        (into {})))
 
 (defn codelet-actions->datoms [db actions]
@@ -111,10 +121,7 @@
                         :matr.node/formula (get action "nodeContent")
                         :matr.node/source (get action "source")
                         :matr.node/parent (get action "boxid")})
-           "addAxiom" (let [rootbox (d/q '[:find ?rb . :in $ :where
-                                           [?rb :matr/kind :matr.kind/box]
-                                           [(missing? $ ?rb :matr.box/parent)]]
-                                         db)
+           "addAxiom" (let [rootbox (db-rootbox-query db)
                             formula (get action "formula")]
                         (if-let [eid (d/q '[:find ?e . :in $ ?f ?rootbox :where
                                             [?e :matr.node/formula ?f]
@@ -128,10 +135,7 @@
                            :matr.node/parent rootbox
                            :matr.node/explored false
                            :matr.box/_axioms rootbox}))
-           "addGoal" (let [rootbox (d/q '[:find ?rb . :in $ :where
-                                          [?rb :matr/kind :matr.kind/box]
-                                          [(missing? $ ?rb :matr.box/parent)]]
-                                        db)
+           "addGoal" (let [rootbox (db-rootbox-query db)
                            formula (get action "formula")]
                        (if-let [eid (d/q '[:find ?e . :in $ ?f ?rootbox :where
                                            [?e :matr.node/formula ?f]
@@ -148,29 +152,44 @@
        (remove nil?)
        (into [])))
 
-(defn codelet-actions->transaction [action-name actions]
+(defn codelet-actions->transaction
+  "Generate a simple transaction which runs each of the actions and
+  tags itself with action-name."
+  [action-name actions]
   [[:db.fn/call #'matr-core.core/codelet-actions->datoms actions]
    {:db/id :db/current-tx :matr.tx/action-name action-name}])
 
-(defn codelet-response->transactions [resp]
+(defn codelet-response->transactions
+  "Convert a response from the codelets server into a sequence of
+  transactions."
+  [resp]
   (let [transactions (->> (get resp "actionDetails")
                           (map first)
                           (map (fn [[action-name actions]]
                                  (codelet-actions->transaction action-name actions))))]
     transactions))
 
-(defn eids->codelet-nodereqs [db eids]
-  (->> (d/pull-many db [:matr.node/formula :as :content
-                        :matr.node/source :as :source
-                        {:matr.node/parent [:db/id]}]
-                    eids)
-       (map (juxt :matr.node/formula :matr.node/source (comp :db/id :matr.node/parent)))
-       (map #(zipmap ["content" "source" "boxid"] %))
+(defn juxt-map
+  "Given a map j from keys k to functions f and an object e, return new
+  map populated with those keys k and values computed by calling each
+  of the corresponding functions f in j on e.
+
+  Useful for transforming trees of maps. Also has a single-argument
+  curried form."
+  ([j e] (into {} (map (fn [[k f]] [k (f e)]) j)))
+  ([j] (fn [e] (juxt-map j e))))
+
+(defn eids->codelet-nodereqs
+  "Generate nodeReqs to send to codelets from a sequence of node ids."
+  [db eids]
+  (->> (d/pull-many db [:matr.node/formula :matr.node/source {:matr.node/parent [:db/id]}] eids)
+       (map (juxt-map {"content" :matr.node/formula, "source" :matr.node/source,"boxid" (comp :db/id :matr.node/parent)}))
        (into [])))
 
-(defn juxt-map [j] (fn [e] (into {} (map (fn [[k f]] [k (f e)]) j))))
 
-(defn db->frontend-json [db]
+(defn db->frontend-json
+  "Export the database in a format the frontend will understand."
+  [db]
   (let [conv-links (fn [links kind selector]
                      (fn [justification]
                        (->> justification links (filter #(= kind (:matr/kind %))) (map selector) (into []))))
@@ -197,8 +216,10 @@
                                                  (map #(as-> % f (:matr.node/formula f) {"content" f "checked" false}))
                                                  (into [])))})
         conv-boxes (fn conv-boxes [b] (cons (conv-box b) (->> b :matr.box/_parent (map conv-boxes) flatten)))
-
-        rootbox (d/q '[:find ?rootbox . :where [?rootbox :matr/kind :matr.kind/box] [(missing? $ ?rootbox :matr.box/parent)]] db)
+        ;; Everything but this pull is just for converting the pull
+        ;; into the existing format. As an alternative, the frontend
+        ;; could be adapted to take this pull directly. The pull could
+        ;; even be simplified some, in that case.
         pull (d/pull db '[:db/id :matr.box/parent
                           {:matr.box/_parent ... 
                            :matr.box/axioms [:matr.node/formula]
@@ -207,10 +228,14 @@
                                                :matr.node/formula :matr.node/explored
                                                {:matr.node/consequents [:db/id :matr/kind :matr.node/formula]
                                                 :matr.node/_consequents [:db/id :matr/kind :matr.node/formula]}]}] 
-                     1)]
+                     (db-rootbox-query db))]
     {"box" (into [] (conv-boxes pull))}))
 
-(defn find-justifications-to-reiterate [db nodes]
+(defn find-justifications-to-reiterate
+  "Given a sequence of node ids, return the transaction information
+  required to reiterate applicable justifications from their parent
+  boxes."
+  [db nodes]
   (let [justifications (d/q '[:find ?n ?f ?b ?j :in $ % [?n ...] :where
                               [?n :matr.node/formula ?f] [?n :matr.node/parent ?b]
                               (ancestor ?bp ?b)
@@ -253,26 +278,34 @@
 
 ;;; Side-effecting stuff
 
-(defn handle-codelet-response [resp]
+(defn handle-codelet-response
+  "Convert and run the actions returned by the codelet server."
+  [resp]
   (doseq [transaction (codelet-response->transactions resp)]
-    (d/transact! db transaction)))
+    (d/transact! conn transaction)))
 
-(defn reiterate-justifications [nodes]
-  (d/transact! db (find-justifications-to-reiterate @db nodes)))
+(defn reiterate-justifications
+  "Reiterate any justifications from parent boxes applicable to the given nodes."
+  [nodes]
+  (d/transact! conn (find-justifications-to-reiterate @conn nodes)))
 
-(defn call-codelets
-  ([] (call-codelets ["ALL"] (d/q '[:find [?n ...] :where [?n :matr.node/explored false]] @db)))
-  ([nodes] (call-codelets ["ALL"] nodes))
+(defn step-proofer
+  "Explore unexplored nodes by sending them to the codelets server and
+  reiterating justifications applicable to them."
+  ([] (step-proofer ["ALL"] (d/q '[:find [?n ...] :where [?n :matr.node/explored false]] @conn)))
+  ([nodes] (step-proofer ["ALL"] nodes))
   ([codelets nodes]
    @(ajax/POST "http://localhost:5002/callCodelets"
                {:format :json
                 :params {'codeletlist codelets
-                         'nodeReq (eids->codelet-nodereqs @db nodes)}
+                         'nodeReq (eids->codelet-nodereqs @conn nodes)}
                 :handler handle-codelet-response})
    (reiterate-justifications nodes)
-   (d/transact! db (->> nodes (map #(vector :db/add % :matr.node/explored true)) (into [])))))
+   (d/transact! conn (->> nodes (map #(vector :db/add % :matr.node/explored true)) (into [])))))
 
-(defn check-formula [formula]
+(defn check-formula
+  "Attempt to parse the formula as edn."
+  [formula]
   (try
     (edn/read-string formula)
     true
@@ -283,15 +316,15 @@
   (GET "/" [] "Hello World")
   (context "/MATRCoreREST/rest/test" req
            (POST "/get/json" {{axioms "axioms", goals "goals", codelets "codelets"} :body}
-                 (call-codelets)
+                 (step-proofer)
                  {:status 200
-                  :body (db->frontend-json @db)})
+                  :body (db->frontend-json @conn)})
            (POST "/get/checkFormula" req
                  {:status 200
                   :headers {"Content-Type" "applicaton/json"}
                   :body (str (check-formula (:body req)))})
            (POST "/submitActions" {{actions "actions" actionName "actionName"} :body}
-                 (d/transact! db (codelet-actions->transaction actionName actions))
+                 (d/transact! conn (codelet-actions->transaction actionName actions))
                  {:status 200}))
   (route/not-found "Not Found"))
 
