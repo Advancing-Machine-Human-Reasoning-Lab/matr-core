@@ -312,6 +312,8 @@
     (catch java.lang.RuntimeException e
       false)))
 
+(defonce gensym-counter (atom 0))
+
 (defroutes app-routes
   (GET "/" [] "Hello World")
   (context "/MATRCoreREST/rest/test" req
@@ -325,7 +327,13 @@
                   :body (str (check-formula (:body req)))})
            (POST "/submitActions" {{actions "actions" actionName "actionName"} :body}
                  (d/transact! conn (codelet-actions->transaction actionName actions))
-                 {:status 200}))
+                 {:status 200})
+           (GET "/query" {{query "query", args "extra-args"} :body}
+                {:status 200
+                 :body (apply d/q query @conn args)})
+           (GET "/gensym" []
+                {:status 200
+                 :body (str (swap! gensym-counter inc))}))
   (route/not-found "Not Found"))
 
 (def app
