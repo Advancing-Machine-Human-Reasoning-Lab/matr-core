@@ -42,19 +42,6 @@
 (def conn (make-initial-db))
 
 
-(defn make-example-db []
-  (let [db (d/create-conn schema)]
-    (d/transact! db [{:matr/kind :matr.kind/box
-                      :db/id "rootbox"
-                      :matr.box/axioms "(AND (a) (b))"
-                      :matr.node/_parent
-                      [{:db/id "(AND (a) (b))"
-                        :matr/kind :matr.kind/node
-                        :matr.node/explored false
-                        :matr.node/formula "(AND (a) (b))"
-                        :matr.node/source "axioms"}]}])
-    db))
-
 ;;; Pure functions over db
 
 (def db-rootbox-query
@@ -361,3 +348,14 @@
 
 (def -main start-server!)
 
+
+
+(defn make-example-db []
+  (let [db (d/create-conn schema)]
+    (d/transact! db [{:matr/kind :matr.kind/box}
+                     [:db.fn/call #'codelet-actions->datoms
+                      [{"action" "addAxiom"
+                        "formula" "(IFF y (NBF (QB y)))"}
+                       {"action" "addGoal"
+                        "formula" "(AND y (NBF (QB y)))"}]]])
+    db))
