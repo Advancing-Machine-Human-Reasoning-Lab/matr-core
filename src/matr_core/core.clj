@@ -62,9 +62,23 @@
             db boxid formulas)
        (into {})))
 
+(def db-box-from-axioms-query `[:find ?box . :in $ ?pbox ?ifs :where
+                                [?box :matr.box/parent ?pbox]
+                                [(d/q [:find [?f ...] :in $ ?box
+                                       :where [?box :matr.box/axioms ?ax] [?ax :matr.node/formula ?f]]
+                                      $ ?box)
+                                 ?fl]
+                                [(set ?fl) ?fs]
+                                [(= ?fs ?ifs)]])
+
+(defn run-db-box-from-axioms-query
+  "Find sub-boxes of a given box with the given axiom set."
+  [db boxid axioms]
+  (d/q db-box-from-axioms-query db boxid (set axioms)))
+
 (defn codelet-actions->datoms [db actions]
   (->> (for [action actions]
-         (case (get action "actions")
+         (case (or (get action "actions") (get action "action"))
            "addBox" (let [axioms (some-> action (get "axioms") (clojure.string/split #"-"))
                           goals (some-> action (get "goals") (clojure.string/split #"-"))]
                       {:db/id "newBox"
@@ -98,6 +112,55 @@
                                  :matr.node/consequents (into [] (concat nextNodes nextBox))
                                  :matr.node/_consequents (into [] (concat prevNodes prevBox))
                                  :matr.node/parent boxid})
+           "add_justification" (let [{boxid "box",antecedents "antecedents",
+                                      consequence "consequence", name "name"} action
+                                     consequentIdMap (db-nodes-query db boxid [consequence])
+                                     anteceedentIdMap (->> antecedents
+                                                           (map #(get % "formula"))
+                                                           (into [])
+                                                           (db-nodes-query db boxid))
+                                     consequence (or (consequentIdMap consequence)
+                                                     {:matr/kind :matr.kind/node
+                                                      :db/id consequence
+                                                      :matr.node/formula consequence
+                                                      :matr.node/explored false
+                                                      :matr.node/source "axioms"
+                                                      :matr.node/parent boxid})
+                                     antecedents (->> (for [{news "newsyms", newa "newaxioms", f "formula"} antecedents]
+                                                        (or (anteceedentIdMap f)
+                                                            (if-let [newa (seq newa)]
+                                                              (if-let [b (run-db-box-from-axioms-query db boxid newa)]
+                                                                {:db/id b
+                                                                 :matr.node/_parent
+                                                                 [{:matr/kind :matr.kind/node
+                                                                   :matr.node/explored false
+                                                                   :matr.node/formula f
+                                                                   :matr.node/source "goals"}]}
+                                                                {:matr/kind :matr.kind/box
+                                                                 :matr.node/_parent
+                                                                 (into [] (concat (map (fn [f] {:db/id f :matr.node/formula f
+                                                                                                :matr.node/explored false
+                                                                                                :matr/kind :matr.kind/node
+                                                                                                :matr.node/source "axioms"})
+                                                                                       newa)
+                                                                                  [{:matr/kind :matr.kind/node
+                                                                                    :matr.node/explored false
+                                                                                    :matr.node/formula f
+                                                                                    :matr.node/source "goals"}]))
+                                                                 :matr.box/axioms (into [] newa)
+                                                                 :matr.box/parent boxid})
+                                                              {:matr/kind :matr.kind/node
+                                                               :matr.node/explored false
+                                                               :matr.node/formula f
+                                                               :matr.node/source "goals"
+                                                               :matr.node/parent boxid})))
+                                                      (into []))]
+                                 {:matr/kind :matr.kind/justification
+                                  :matr.justification/inference-name name
+                                  :matr.node/consequents consequence
+                                  :matr.node/_consequents antecedents
+                                  :matr.node/parent boxid})
+           "add_box" ()
            "addNode" (if (d/q '[:find ?e . :in $ ?f ?b
                                 :where [?e :matr.node/formula ?f] [?e :matr.box/parent ?b]]
                               db (get action "nodeContent") (get action "boxid"))
