@@ -85,7 +85,7 @@
                  {:status 200})
            (GET "/query" {{query "query", args "extra-args"} :body}
                 {:status 200
-                 :body (apply d/q query @conn args)})
+                 :body (apply d/q (edn/read-string query) @conn args)})
            (GET "/gensym" []
                 {:status 200
                  :body (str (swap! gensym-counter inc))}))
