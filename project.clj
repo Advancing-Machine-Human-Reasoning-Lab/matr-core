@@ -11,7 +11,8 @@
                  [compojure "1.6.1"]
                  [ring-cors "0.1.13"]
                  [cljs-ajax "0.8.0"]
-                 [datascript "0.18.2"]]
+                 [datascript "0.18.2"]
+                 [requests "2.22.0"]]
   :main ^:skip-aot matr-core.core
   :target-path "target/%s"
   :profiles {:uberjar {:aot :all}})
