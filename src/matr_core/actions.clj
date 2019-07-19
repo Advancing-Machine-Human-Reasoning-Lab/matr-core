@@ -96,7 +96,6 @@
                                  {:matr/kind :matr.kind/node
                                   :matr.node/explored false
                                   :matr.node/formula f
-                                  :matr.node/source "goals"
                                   :matr.node/parent boxid})))
                          (into []))]
     {:matr/kind :matr.kind/justification
