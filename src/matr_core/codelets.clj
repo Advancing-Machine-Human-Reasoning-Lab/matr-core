@@ -12,7 +12,7 @@
   "Generate nodeReqs to send to codelets from a sequence of node ids."
   [db eids]
   (->> (d/pull-many db [:matr.node/formula :matr.node/source {:matr.node/parent [:db/id]}] eids)
-       (map (juxt-map {"content" :matr.node/formula, "source" :matr.node/source,"boxid" (comp :db/id :matr.node/parent)}))
+       (map (juxt-map {"content" :matr.node/formula, "boxid" (comp :db/id :matr.node/parent)}))
        (into [])))
 
 
@@ -37,7 +37,7 @@
                               [?j :matr.node/parent ?bp] [?j :matr/kind :matr.kind/justification]
                               (not [?j0 :matr.node/parent ?b] [?j0 :matr.justification/reiterated-from ?j])
                               [?n0 :matr.node/consequents ?j] [?n0 :matr.node/formula ?f]
-                              [?n1 :matr.node/consequents ?j] [?n1 :matr.node/source "axioms"]]
+                              [?n1 :matr.node/consequents ?j]]
                             db
                             '[[(ancestor ?bp ?b) [?b :matr.box/parent ?bp]]
                               [(ancestor ?bp ?b) [?b :matr.box/parent ?b0] (ancestor ?bp ?b0)]]
@@ -58,7 +58,6 @@
                                                    {:matr/kind :matr.kind/node
                                                     :matr.node/explored false
                                                     :matr.node/formula f
-                                                    :matr.node/source "axioms"
                                                     :matr.node/parent b})))
                                   (into []))]
              {:matr.justification/inference-name (d/q '[:find ?name . :in $ ?j :where

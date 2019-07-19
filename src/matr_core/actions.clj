@@ -16,13 +16,11 @@
      :matr/kind :matr.kind/box
      :matr.node/_parent (into [] (concat (map (fn [f] {:db/id f :matr.node/formula f
                                                        :matr.node/explored false
-                                                       :matr/kind :matr.kind/node
-                                                       :matr.node/source "axioms"})
+                                                       :matr/kind :matr.kind/node})
                                               axioms)
                                          (map (fn [f] {:db/id f :matr.node/formula f
                                                        :matr.node/explored false
-                                                       :matr/kind :matr.kind/node
-                                                       :matr.node/source "goals"})
+                                                       :matr/kind :matr.kind/node})
                                               goals)))
      :matr.box/axioms axioms
      :matr.box/goals goals
@@ -56,7 +54,6 @@
      :db/id (get action "nodeContent")
      :matr.node/explored false
      :matr.node/formula (get action "nodeContent")
-     :matr.node/source (get action "source")
      :matr.node/parent (get action "boxid")}))
 
 (defmethod action->datoms "add_justification" [db action]
@@ -72,7 +69,6 @@
                          :db/id consequence
                          :matr.node/formula consequence
                          :matr.node/explored false
-                         :matr.node/source "axioms"
                          :matr.node/parent boxid})
         antecedents (->> (for [{news "newsyms", newa "newaxioms", f "formula"} antecedents]
                            (or (anteceedentIdMap f)
@@ -123,7 +119,6 @@
        :matr.box/_axioms rootbox}
       {:matr/kind :matr.kind/node
        :matr.node/formula formula
-       :matr.node/source "axioms"
        :matr.node/parent rootbox
        :matr.node/explored false
        :matr.box/_axioms rootbox})))
@@ -139,7 +134,6 @@
        :matr.box/_goals rootbox}
       {:matr/kind :matr.kind/node
        :matr.node/formula formula
-       :matr.node/source "goals"
        :matr.node/parent rootbox
        :matr.node/explored false
        :matr.box/_goals rootbox})))
