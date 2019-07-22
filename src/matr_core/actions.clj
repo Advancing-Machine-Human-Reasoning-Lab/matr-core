@@ -15,11 +15,9 @@
     {:db/id "newBox"
      :matr/kind :matr.kind/box
      :matr.node/_parent (into [] (concat (map (fn [f] {:db/id f :matr.node/formula f
-                                                       :matr.node/explored false
                                                        :matr/kind :matr.kind/node})
                                               axioms)
                                          (map (fn [f] {:db/id f :matr.node/formula f
-                                                       :matr.node/explored false
                                                        :matr/kind :matr.kind/node})
                                               goals)))
      :matr.box/axioms axioms
@@ -52,7 +50,6 @@
     nil
     {:matr/kind :matr.kind/node
      :db/id (get action "nodeContent")
-     :matr.node/explored false
      :matr.node/formula (get action "nodeContent")
      :matr.node/parent (get action "boxid")}))
 
@@ -68,7 +65,6 @@
                         {:matr/kind :matr.kind/node
                          :db/id consequence
                          :matr.node/formula consequence
-                         :matr.node/explored false
                          :matr.node/parent boxid})
         antecedents (->> (for [{news "newsyms", newa "newaxioms", f "formula"} antecedents]
                            (or (anteceedentIdMap f)
@@ -77,21 +73,17 @@
                                    {:db/id b
                                     :matr.node/_parent
                                     [{:matr/kind :matr.kind/node
-                                      :matr.node/explored false
                                       :matr.node/formula f}]}
                                    {:matr/kind :matr.kind/box
                                     :matr.node/_parent
                                     (into [] (concat (map (fn [f] {:db/id f :matr.node/formula f
-                                                                   :matr.node/explored false
                                                                    :matr/kind :matr.kind/node})
                                                           newa)
                                                      [{:matr/kind :matr.kind/node
-                                                       :matr.node/explored false
                                                        :matr.node/formula f}]))
                                     :matr.box/axioms (into [] newa)
                                     :matr.box/parent boxid})
                                  {:matr/kind :matr.kind/node
-                                  :matr.node/explored false
                                   :matr.node/formula f
                                   :matr.node/parent boxid})))
                          (into []))]
@@ -116,7 +108,6 @@
       {:matr/kind :matr.kind/node
        :matr.node/formula formula
        :matr.node/parent rootbox
-       :matr.node/explored false
        :matr.box/_axioms rootbox})))
 
 (defmethod action->datoms "addGoal" [db action]
@@ -131,7 +122,6 @@
       {:matr/kind :matr.kind/node
        :matr.node/formula formula
        :matr.node/parent rootbox
-       :matr.node/explored false
        :matr.box/_goals rootbox})))
 
 
