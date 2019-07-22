@@ -78,19 +78,16 @@
                                     :matr.node/_parent
                                     [{:matr/kind :matr.kind/node
                                       :matr.node/explored false
-                                      :matr.node/formula f
-                                      :matr.node/source "goals"}]}
+                                      :matr.node/formula f}]}
                                    {:matr/kind :matr.kind/box
                                     :matr.node/_parent
                                     (into [] (concat (map (fn [f] {:db/id f :matr.node/formula f
                                                                    :matr.node/explored false
-                                                                   :matr/kind :matr.kind/node
-                                                                   :matr.node/source "axioms"})
+                                                                   :matr/kind :matr.kind/node})
                                                           newa)
                                                      [{:matr/kind :matr.kind/node
                                                        :matr.node/explored false
-                                                       :matr.node/formula f
-                                                       :matr.node/source "goals"}]))
+                                                       :matr.node/formula f}]))
                                     :matr.box/axioms (into [] newa)
                                     :matr.box/parent boxid})
                                  {:matr/kind :matr.kind/node
