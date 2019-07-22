@@ -20,7 +20,8 @@
   (let [conv-links (fn [links kind selector]
                      (fn [justification]
                        (->> justification links (filter #(= kind (:matr/kind %))) (map selector) (into []))))
-        conv-node (juxt-map {"content" :matr.node/formula,"explored" :matr.node/explored "checked" (constantly false)})
+        check-explored-flag (fn [n] (some #(= % "checked") (:matr.node/flags n)))
+        conv-node (juxt-map {"content" :matr.node/formula,"explored" check-explored-flag "checked" (constantly false)})
         conv-justification (juxt-map {"content" :matr.justification/inference-name,
                                       "nextNodes" (conv-links :matr.node/consequents :matr.kind/node :matr.node/formula),
                                       "nextBoxes" (conv-links :matr.node/consequents :matr.kind/box :db/id),
@@ -52,7 +53,7 @@
                            :matr.box/axioms [:matr.node/formula]
                            :matr.box/goals [:matr.node/formula]
                            :matr.node/_parent [:matr/kind :matr.justification/inference-name
-                                               :matr.node/formula :matr.node/explored
+                                               :matr.node/formula :matr.node/flags
                                                {:matr.node/consequents [:db/id :matr/kind :matr.node/formula]
                                                 :matr.node/_consequents [:db/id :matr/kind :matr.node/formula]}]}] 
                      (db-rootbox-query db))]

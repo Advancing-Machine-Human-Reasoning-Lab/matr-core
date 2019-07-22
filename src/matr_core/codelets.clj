@@ -56,7 +56,7 @@
                                                           [?n :matr.node/formula ?f]]
                                                         db f b)
                                                    {:matr/kind :matr.kind/node
-                                                    :matr.node/explored false
+                                                    :matr.node/flags ["explored"]
                                                     :matr.node/formula f
                                                     :matr.node/parent b})))
                                   (into []))]
@@ -86,7 +86,10 @@
 (defn step-proofer
   "Explore unexplored nodes by sending them to the codelets server and
   reiterating justifications applicable to them."
-  ([] (step-proofer ["ALL"] (d/q '[:find [?n ...] :where [?n :matr.node/explored false]] @conn)))
+  ([] (step-proofer ["ALL"] (d/q '[:find [?n ...] :where
+                                   [?n :matr/kind :matr.kind/node]
+                                   (not [?n :matr.node/flags "checked"])]
+                                 @conn)))
   ([nodes] (step-proofer ["ALL"] nodes))
   ([codelets nodes]
    @(ajax/POST "http://localhost:5002/callCodelets"
@@ -95,4 +98,4 @@
                          'nodeReq (eids->codelet-nodereqs @conn nodes)}
                 :handler handle-codelet-response})
    (reiterate-justifications nodes)
-   (d/transact! conn (->> nodes (map #(vector :db/add % :matr.node/explored true)) (into [])))))
+   (d/transact! conn (->> nodes (map #(vector :db/add % :matr.node/flags "checked")) (into [])))))
