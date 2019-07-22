@@ -15,6 +15,8 @@
                                  :db/cardinality :db.cardinality/one}
              :matr.node/explored {:db/type :db.type/boolean
                                   :db/cardinality :db.cardinality/one}
+             :matr.node/flags {:db/type :db.type/string
+                               :db/cardinality :db.cardinality/many}
              :matr.justification/inference-name {:db/type :db.type/string
                                                  :db/cardinality :db.cardinality/one}
              :matr.justification/reiterated-from {:db/type :db.type/ref
