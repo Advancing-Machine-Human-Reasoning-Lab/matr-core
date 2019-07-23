@@ -60,3 +60,16 @@
   "Find sub-boxes of a given box with the given axiom set."
   [db boxid axioms]
   (d/q db-box-from-axioms-query db boxid (set axioms)))
+
+(def db-all-axioms-pull '[{:matr.box/axioms [:matr.node/formula] :matr.box/parent ...}])
+
+(defn axioms-pull->axioms [axioms-pull]
+  (when (seq axioms-pull)
+    (concat (map :matr.node/formula (:matr.box/axioms axioms-pull))
+            (axioms-pull->axioms (:matr.box/parent axioms-pull)))))
+
+(defn pull-all-axioms [db boxid]
+  (-> (d/pull db db-all-axioms-pull boxid)
+      axioms-pull->axioms
+      set))
+

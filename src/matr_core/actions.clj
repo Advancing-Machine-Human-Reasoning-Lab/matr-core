@@ -1,7 +1,8 @@
 (ns matr-core.actions
   (:require
    [datascript.core :as d]
-   [matr-core.db :refer [db-rootbox-query db-nodes-query run-db-box-from-axioms-query]]))
+   [matr-core.db :refer [db-rootbox-query db-nodes-query run-db-box-from-axioms-query
+                         pull-all-axioms]]))
 
 (defmulti action->datoms
   "Convert a map describing a single action to the proper datoms required to implement that action"
@@ -53,6 +54,40 @@
      :matr.node/formula (get action "nodeContent")
      :matr.node/parent (get action "boxid")}))
 
+(defn actually-new-axioms [db boxid new-axioms]
+  (let [new-axioms (set new-axioms)]
+    (clojure.set/difference new-axioms (pull-all-axioms db boxid))))
+
+(defn process-justification-anteceedent [db boxid anteceedent anteceedent-nodes-map]
+  (let [{news "newsyms", newa "newaxioms", f "formula"} anteceedent
+        new-axioms (actually-new-axioms db boxid newa)]
+    (if (seq new-axioms)
+      (if-let [b (run-db-box-from-axioms-query db boxid newa)]
+        {:matr/kind :matr.kind/node
+         :matr.node/parent b
+         :matr.node/formula f}
+        {:matr/kind :matr.kind/box
+         :matr.node/_parent
+         (into [] (concat (map (fn [f] {:db/id f :matr.node/formula f
+                                        :matr/kind :matr.kind/node})
+                               new-axioms)
+                          [{:matr/kind :matr.kind/node
+                            :db/id f :matr.node/formula f}]))
+         :matr.box/axioms (into [] new-axioms)
+         :matr.box/parent boxid})
+      (or (anteceedent-nodes-map f)
+          {:matr/kind :matr.kind/node
+           :matr.node/formula f
+           :matr.node/parent boxid}))))
+
+(defn process-justification-anteceedents [db boxid anteceedents]
+  (let [anteceedent-nodes-map (->> anteceedents
+                                   (map #(get % "formula"))
+                                   (into [])
+                                   (db-nodes-query db boxid))]
+    (for [anteceedent anteceedents]
+      (process-justification-anteceedent db boxid anteceedent anteceedent-nodes-map))))
+
 (defmethod action->datoms "add_justification" [db action]
   (let [{boxid "box",antecedents "antecedents",
          consequence "consequence", name "name"} action
@@ -66,27 +101,7 @@
                          :db/id consequence
                          :matr.node/formula consequence
                          :matr.node/parent boxid})
-        antecedents (->> (for [{news "newsyms", newa "newaxioms", f "formula"} antecedents]
-                           (or (anteceedentIdMap f)
-                               (if-let [newa (seq newa)]
-                                 (if-let [b (run-db-box-from-axioms-query db boxid newa)]
-                                   {:db/id b
-                                    :matr.node/_parent
-                                    [{:matr/kind :matr.kind/node
-                                      :matr.node/formula f}]}
-                                   {:matr/kind :matr.kind/box
-                                    :matr.node/_parent
-                                    (into [] (concat (map (fn [f] {:db/id f :matr.node/formula f
-                                                                   :matr/kind :matr.kind/node})
-                                                          newa)
-                                                     [{:matr/kind :matr.kind/node
-                                                       :matr.node/formula f}]))
-                                    :matr.box/axioms (into [] newa)
-                                    :matr.box/parent boxid})
-                                 {:matr/kind :matr.kind/node
-                                  :matr.node/formula f
-                                  :matr.node/parent boxid})))
-                         (into []))]
+        antecedents (process-justification-anteceedents db boxid antecedents)]
     {:matr/kind :matr.kind/justification
      :matr.justification/inference-name name
      :matr.node/consequents consequence
