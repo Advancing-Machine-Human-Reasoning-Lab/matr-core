@@ -20,7 +20,10 @@
              :matr.justification/reiterated-from {:db/type :db.type/ref
                                                   :db/cardinality :db.cardinality/many}
              :matr/kind {:db/type :db.type/keyword
-                         :db/cardinality :db.cardinality/one}})
+                         :db/cardinality :db.cardinality/one}
+             :matr.codelet/endpoint {:db/type :db.type/string
+                                     :db/cardinality :db.cardinality/one}
+             :matr.codelet/query {:db/cardninality :db.cardinality/one}})
 
 (defn make-initial-db []
   (let [conn (d/create-conn schema)]
@@ -73,3 +76,19 @@
       axioms-pull->axioms
       set))
 
+(def db-justification-query '[:find ?sj . :in $ ?box ?inference ?antecedent-formulas ?consequent-formula :where
+                              [?c :matr.node/formula ?consequent-formula]
+                              [?c :matr.node/parent ?box]
+                              [?sj :matr.node/parent ?box]
+                              [?sj :matr/kind :matr.kind/justification]
+                              [?sj :matr.node/consequents ?c]
+                              [?sj :matr.justification/inference-name ?inference]
+                              [(datascript.core/q [:find [?saf ...] :in $ ?sj :where
+                                                   [?s :matr.node/consequents ?sj]
+                                                   [?s :matr.node/formula ?saf]]
+                                                  $ ?sj)
+                               ?al]
+                              [(set ?al) ?antecedent-formulas]])
+
+(def db-codelets-query '[:find [(pull ?c [:matr.codelet/endpoint :matr.codelet/query]) ...] :where
+                         [?c :matr/kind :matr.kind/codelet]])

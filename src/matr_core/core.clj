@@ -70,11 +70,15 @@
 
 (defonce gensym-counter (atom 0))
 
+(defonce server (atom nil))
+
 (defroutes app-routes
   (GET "/" [] "Hello World")
   (context "/MATRCoreREST/rest/test" req
            (POST "/get/json" {{axioms "axioms", goals "goals", codelets "codelets"} :body}
-                 (step-proofer)
+                 (let [c (async/chan)]
+                   (async/>!! (:cin @server) {:type :step :reply-chan c})
+                   (async/<!! c))
                  {:status 200
                   :body (db->frontend-json @conn)})
            (POST "/get/checkFormula" req
@@ -85,11 +89,22 @@
                  (d/transact! conn (actions->transaction actionName actions))
                  {:status 200})
            (GET "/query" {{query "query", args "extra-args"} :body}
-                {:status 200
-                 :body (apply d/q (edn/read-string query) @conn args)})
+                (if (and (string? query) (vector? args))
+                  (let [res (apply d/q (edn/read-string query) @conn args)]
+                    {:status 200
+                     :content-type "application/json"
+                     :body (if (coll? res) res (str res))})
+                  {:status 400
+                   :content-type "text/plain"
+                   :body "Invalid arguments: needs string query and vector extra-args"}))
            (GET "/gensym" []
                 {:status 200
-                 :body (str (swap! gensym-counter inc))}))
+                 :body (str (swap! gensym-counter inc))})
+           (POST "/registerCodelet" {{query "query" endpoint "endpoint"} :body}
+                 (d/transact! conn {:matr/kind :matr.kind/codelet
+                                    :matr.codelet/endpoint endpoint
+                                    :matr.codelet/query query})
+                 {:status 200}))
   (route/not-found "Not Found"))
 
 (def app
@@ -101,19 +116,34 @@
        :access-control-allow-origin [#".*"]
        :access-control-allow-methods [:get :post :options])))
 
-(defonce server (atom nil))
-
 (defn start-server! [& []]
-  (reset! server
-          (run-jetty
-           #'app
-           {:port 8080
-            :join? false})))
+  (let [inp (async/chan)]
+    (async/go-loop []
+      (let [message (async/<! inp)]
+        (case (:type message)
+          :step (do
+                  (try
+                    (step-proofer)
+                    (async/>! (:reply-chan message) :done)
+                    (catch Exception e
+                      (println "Whelp, that didn't go well.")
+                      (println (.getMessage e))
+                      (.printStackTrace e)
+                      (async/>! (:reply-chan message) :error!)))
+                  (recur))
+          :exit (when-let [s @server]
+                  (.stop s)
+                  (reset! server nil)))))
+    (reset! server
+            {:server (run-jetty
+                      #'app
+                      {:port 8080
+                       :join? false})
+             :cin inp})))
 
 (defn stop-server! []
-  (when @server
-    (.stop @server)
-    (reset! server nil)))
+  (when-let [s @server]
+    (async/>!! (:cin s) {:type :exit})))
 
 (def -main start-server!)
 

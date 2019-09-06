@@ -3,7 +3,7 @@
    [ajax.core :as ajax]
    [datascript.core :as d]
    [matr-core.utils :refer [juxt-map]]
-   [matr-core.db :refer [schema conn]]
+   [matr-core.db :refer [schema conn db-codelets-query db-justification-query]]
    [matr-core.actions :refer [actions->transaction]]))
 
 ;;;; Pure functions over db
@@ -31,7 +31,7 @@
   required to reiterate applicable justifications from their parent
   boxes."
   [db nodes]
-  (let [justifications (d/q '[:find ?n ?f ?b ?j :in $ % [?n ...] :where
+  (let [justifications (d/q '[:find ?n ?f ?b ?bp ?j :in $ % [?n ...] :where
                               [?n :matr.node/formula ?f] [?n :matr.node/parent ?b]
                               (ancestor ?bp ?b)
                               [?j :matr.node/parent ?bp] [?j :matr/kind :matr.kind/justification]
@@ -42,32 +42,45 @@
                             '[[(ancestor ?bp ?b) [?b :matr.box/parent ?bp]]
                               [(ancestor ?bp ?b) [?b :matr.box/parent ?b0] (ancestor ?bp ?b0)]]
                             nodes)]
-    (->> (for [[n f b j] justifications]
-           (let [antecedents (d/q '[:find [?a ...] :in $ ?j ?f :where
+    (->> (for [[n f b pb j] justifications]
+           (let [antecedents (d/q '[:find ?a ?af :in $ ?j ?f :where
                                     [?a :matr.node/consequents ?j]
-                                    (not [?a :matr.node/formula ?f])]
+                                    (not [?a :matr.node/formula ?f])
+                                    [?a :matr.node/formula ?af]]
                                   db j f)
-                 consequents (->> (d/q '[:find [?f ...] :in $ ?j :where
-                                         [?j :matr.node/consequents ?c]
-                                         [?c :matr.node/formula ?f]]
-                                       db j b)
-                                  (map (fn [f] (or (d/q '[:find ?n . :in $ ?f ?b :where
-                                                          [?n :matr.node/parent ?b]
-                                                          [?n :matr.node/formula ?f]]
-                                                        db f b)
-                                                   {:matr/kind :matr.kind/node
-                                                    :matr.node/flags ["explored"]
-                                                    :matr.node/formula f
-                                                    :matr.node/parent b})))
-                                  (into []))]
-             {:matr.justification/inference-name (d/q '[:find ?name . :in $ ?j :where
-                                                        [?j :matr.justification/inference-name ?name]]
-                                                      db j)
-              :matr.justification/reiterated-from j
-              :matr/kind :matr.kind/justification
-              :matr.node/consequents consequents
-              :matr.node/_consequents (into [] (cons n antecedents))
-              :matr.node/parent b}))
+                 antecedent-formula (map second antecedents)
+                 antecedents (for [[a af] antecedents]
+                               {:matr/kind :matr.kind/node
+                                :matr.node/formula af
+                                :matr.node/parent b
+                                :matr.node/_consequents
+                                {:matr/kind :matr.kind/justification
+                                 :matr.justification/inference-name "Reiteration"
+                                 :matr.node/_consequents a
+                                 :matr.node/parent pb}})
+                 consequent-formula (d/q '[:find ?f . :in $ ?j :where
+                                           [?j :matr.node/consequents ?c]
+                                           [?c :matr.node/formula ?f]]
+                                         db j)
+                 inference (d/q '[:find ?name . :in $ ?j :where
+                                  [?j :matr.justification/inference-name ?name]]
+                                db j)
+                 sub-just (d/q db-justification-query db b inference (into #{} (cons f antecedent-formula)) consequent-formula)]
+             (when-not sub-just
+               {:matr.justification/inference-name inference
+                :matr.justification/reiterated-from j
+                :matr/kind :matr.kind/justification
+                :matr.node/consequents [(or (d/q '[:find ?n . :in $ ?f ?b :where
+                                                   [?n :matr.node/parent ?b]
+                                                   [?n :matr.node/formula ?f]]
+                                                 db consequent-formula b)
+                                            {:matr/kind :matr.kind/node
+                                             :matr.node/flags ["explored"]
+                                             :matr.node/formula consequent-formula
+                                             :matr.node/parent b})]
+                :matr.node/_consequents (into [] (cons n antecedents))
+                :matr.node/parent b})))
+         (filter identity)
          (into []))))
 
 ;;;; Side-effecting stuff
@@ -92,6 +105,17 @@
                                  @conn)))
   ([nodes] (step-proofer ["ALL"] nodes))
   ([codelets nodes]
+   (let [db @conn]
+     (->> (for [codelet (d/q db-codelets-query db)]
+            (let [q (d/q (:matr.codelet/query codelet) db)]
+              (when (seq q)
+                (ajax/POST (:matr.codelet/endpoint codelet)
+                           {:format :json
+                            :params q
+                            :handler handle-codelet-response}))))
+          doall
+          (map deref)
+          doall))
    @(ajax/POST "http://localhost:5002/callCodelets"
                {:format :json
                 :params {'codeletlist codelets

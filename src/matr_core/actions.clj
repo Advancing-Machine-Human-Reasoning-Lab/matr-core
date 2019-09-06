@@ -2,7 +2,7 @@
   (:require
    [datascript.core :as d]
    [matr-core.db :refer [db-rootbox-query db-nodes-query run-db-box-from-axioms-query
-                         pull-all-axioms]]))
+                         db-justification-query pull-all-axioms]]))
 
 (defmulti action->datoms
   "Convert a map describing a single action to the proper datoms required to implement that action"
@@ -90,23 +90,27 @@
 
 (defmethod action->datoms "add_justification" [db action]
   (let [{boxid "box",antecedents "antecedents",
-         consequence "consequence", name "name"} action
+         consequence "consequence", name "name"
+         local-id "id"} action
         consequentIdMap (db-nodes-query db boxid [consequence])
-        anteceedentIdMap (->> antecedents
-                              (map #(get % "formula"))
-                              (into [])
-                              (db-nodes-query db boxid))
-        consequence (or (consequentIdMap consequence)
-                        {:matr/kind :matr.kind/node
-                         :db/id consequence
-                         :matr.node/formula consequence
-                         :matr.node/parent boxid})
-        antecedents (process-justification-anteceedents db boxid antecedents)]
-    {:matr/kind :matr.kind/justification
-     :matr.justification/inference-name name
-     :matr.node/consequents consequence
-     :matr.node/_consequents antecedents
-     :matr.node/parent boxid}))
+        antecedent-formula (->> antecedents
+                                (map #(get % "formula"))
+                                (into #{}))
+        justification (d/q db-justification-query db boxid name antecedent-formula consequence)]
+    (when-not justification
+      (let [anteceedentIdMap (db-nodes-query db boxid antecedents)
+            consequence (or (consequentIdMap consequence)
+                            {:matr/kind :matr.kind/node
+                             :db/id consequence
+                             :matr.node/formula consequence
+                             :matr.node/parent boxid})
+            antecedents (process-justification-anteceedents db boxid antecedents)]
+        {:db/id local-id
+         :matr/kind :matr.kind/justification
+         :matr.justification/inference-name name
+         :matr.node/consequents consequence
+         :matr.node/_consequents antecedents
+         :matr.node/parent boxid}))))
 
 (defmethod action->datoms "add_box" [db action]
   nil)
@@ -139,6 +143,14 @@
        :matr.node/parent rootbox
        :matr.box/_goals rootbox})))
 
+(defmethod action->datoms "flag" [db action]
+  (let [{boxid "box" formula "formula" flag "flag"} action]
+    (when-let [eid (d/q '[:find ?e . :in $ ?b ?f :where
+                          [?e :matr.node/parent ?b]
+                          [?e :matr.node/formula ?f]]
+                        boxid formula)]
+      {:db/id eid
+       :matr.node/flags [flag]})))
 
 (defn actions->datoms [db actions]
   (->>
