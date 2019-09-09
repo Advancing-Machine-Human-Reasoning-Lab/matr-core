@@ -102,9 +102,9 @@
                 {:status 200
                  :body (str (swap! gensym-counter inc))})
            (POST "/registerCodelet" {{query "query" endpoint "endpoint"} :body}
-                 (d/transact! conn {:matr/kind :matr.kind/codelet
-                                    :matr.codelet/endpoint endpoint
-                                    :matr.codelet/query query})
+                 (d/transact! conn [{:matr/kind :matr.kind/codelet
+                                     :matr.codelet/endpoint endpoint
+                                     :matr.codelet/query query}])
                  {:status 200}))
   (route/not-found "Not Found"))
 
