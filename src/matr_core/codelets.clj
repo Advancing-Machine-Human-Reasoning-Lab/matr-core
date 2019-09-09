@@ -1,5 +1,6 @@
 (ns matr-core.codelets
   (:require
+   [clojure.edn :as edn]
    [ajax.core :as ajax]
    [datascript.core :as d]
    [matr-core.utils :refer [juxt-map]]
@@ -107,7 +108,7 @@
   ([codelets nodes]
    (let [db @conn]
      (->> (for [codelet (d/q db-codelets-query db)]
-            (let [q (d/q (:matr.codelet/query codelet) db)]
+            (let [q (d/q (edn/read-string (:matr.codelet/query codelet) db))]
               (when (seq q)
                 (ajax/POST (:matr.codelet/endpoint codelet)
                            {:format :json
