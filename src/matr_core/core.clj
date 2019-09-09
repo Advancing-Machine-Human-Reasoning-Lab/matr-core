@@ -20,8 +20,9 @@
   (let [conv-links (fn [links kind selector]
                      (fn [justification]
                        (->> justification links (filter #(= kind (:matr/kind %))) (map selector) (into []))))
-        check-explored-flag (fn [n] (some #(= % "checked") (:matr.node/flags n)))
-        conv-node (juxt-map {"content" :matr.node/formula,"explored" check-explored-flag "checked" (constantly false)})
+        check-explored-flag (fn [n] (some #(= % "explored") (:matr.node/flags n)))
+        check-checked-flag (fn [n] (some #(= % "checked") (:matr.node/flags n)))
+        conv-node (juxt-map {"content" :matr.node/formula,"explored" check-explored-flag "checked" check-checked-flag})
         conv-justification (juxt-map {"content" :matr.justification/inference-name,
                                       "nextNodes" (conv-links :matr.node/consequents :matr.kind/node :matr.node/formula),
                                       "nextBoxes" (conv-links :matr.node/consequents :matr.kind/box :db/id),
@@ -41,7 +42,7 @@
                                                   (map #(as-> % f (:matr.node/formula f) {"content" f "checked" true}))
                                                   (into [])))
                             "goals" (fn [b] (->> b :matr.box/goals
-                                                 (map #(as-> % f (:matr.node/formula f) {"content" f "checked" false}))
+                                                 (map #(as-> % f (:matr.node/formula f) {"content" f}))
                                                  (into [])))})
         conv-boxes (fn conv-boxes [b] (cons (conv-box b) (->> b :matr.box/_parent (map conv-boxes) flatten)))
         ;; Everything but this pull is just for converting the pull

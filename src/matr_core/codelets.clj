@@ -101,7 +101,7 @@
   reiterating justifications applicable to them."
   ([] (step-proofer ["ALL"] (d/q '[:find [?n ...] :where
                                    [?n :matr/kind :matr.kind/node]
-                                   (not [?n :matr.node/flags "checked"])]
+                                   (not [?n :matr.node/flags "explored"])]
                                  @conn)))
   ([nodes] (step-proofer ["ALL"] nodes))
   ([codelets nodes]
@@ -122,4 +122,4 @@
                          'nodeReq (eids->codelet-nodereqs @conn nodes)}
                 :handler handle-codelet-response})
    (reiterate-justifications nodes)
-   (d/transact! conn (->> nodes (map #(vector :db/add % :matr.node/flags "checked")) (into [])))))
+   (d/transact! conn (->> nodes (map #(vector :db/add % :matr.node/flags "explored")) (into [])))))
