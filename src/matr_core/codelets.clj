@@ -108,7 +108,7 @@
   ([codelets nodes]
    (let [db @conn]
      (->> (for [codelet (d/q db-codelets-query db)]
-            (let [q (d/q (edn/read-string (:matr.codelet/query codelet) db))]
+            (let [q (d/q (edn/read-string (:matr.codelet/query codelet)) db)]
               (when (seq q)
                 (ajax/POST (:matr.codelet/endpoint codelet)
                            {:format :json
