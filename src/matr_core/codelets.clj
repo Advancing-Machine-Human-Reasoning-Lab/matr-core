@@ -115,7 +115,7 @@
                             :params q
                             :handler handle-codelet-response}))))
           doall
-          (map deref)
+          (map (fn [e] (when e (deref e))))
           doall))
    @(ajax/POST "http://localhost:5002/callCodelets"
                {:format :json
