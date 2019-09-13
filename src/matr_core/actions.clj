@@ -145,12 +145,16 @@
 
 (defmethod action->datoms "flag" [db action]
   (let [{boxid "box" formula "formula" flag "flag"} action]
-    (when-let [eid (d/q '[:find ?e . :in $ ?b ?f :where
-                          [?e :matr.node/parent ?b]
-                          [?e :matr.node/formula ?f]]
-                        db boxid formula)]
+    (if-let [eid (d/q '[:find ?e . :in $ ?b ?f :where
+                        [?e :matr.node/parent ?b]
+                        [?e :matr.node/formula ?f]]
+                      db boxid formula)]
       {:db/id eid
-       :matr.node/flags [flag]})))
+       :matr.node/flags [flag]}
+      {:db/id formula
+       :matr.node/flags [flag]
+       :matr.node/parent boxid
+       :matr.node/formula formula})))
 
 (defn actions->datoms [db actions]
   (->>
