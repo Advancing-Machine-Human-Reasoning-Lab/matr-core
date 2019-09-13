@@ -148,7 +148,7 @@
     (when-let [eid (d/q '[:find ?e . :in $ ?b ?f :where
                           [?e :matr.node/parent ?b]
                           [?e :matr.node/formula ?f]]
-                        boxid formula)]
+                        db boxid formula)]
       {:db/id eid
        :matr.node/flags [flag]})))
 
