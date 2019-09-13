@@ -22,7 +22,8 @@
   transactions."
   [resp]
   (let [transactions (->> (get resp "actionDetails")
-                          (map first)
+                          (map seq)
+                          flatten
                           (map (fn [[action-name actions]]
                                  (actions->transaction action-name actions))))]
     transactions))
