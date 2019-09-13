@@ -23,7 +23,7 @@
   [resp]
   (let [transactions (->> (get resp "actionDetails")
                           (map seq)
-                          flatten
+                          (apply concat)
                           (map (fn [[action-name actions]]
                                  (actions->transaction action-name actions))))]
     transactions))
