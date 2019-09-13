@@ -37,6 +37,7 @@
                               [?n :matr.node/formula ?f] [?n :matr.node/parent ?b]
                               (ancestor ?bp ?b)
                               [?j :matr.node/parent ?bp] [?j :matr/kind :matr.kind/justification]
+                              (not [?j :matr.node/inference-name "Reiteration"])
                               (not [?j0 :matr.node/parent ?b] [?j0 :matr.justification/reiterated-from ?j])
                               [?n0 :matr.node/consequents ?j] [?n0 :matr.node/formula ?f]
                               [?n1 :matr.node/consequents ?j]]
