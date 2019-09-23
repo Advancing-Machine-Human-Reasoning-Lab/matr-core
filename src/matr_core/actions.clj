@@ -162,6 +162,7 @@
 (defn actions->transaction
   "Generate a simple transaction which runs each of the actions and
   tags itself with action-name."
-  [action-name actions]
-  [[:db.fn/call #'matr-core.actions/actions->datoms actions]
-   {:db/id :db/current-tx :matr.tx/action-name action-name}])
+  ([actions] [[:db.fn/call #'matr-core.actions/actions->datoms actions]])
+  ([action-name actions]
+   [[:db.fn/call #'matr-core.actions/actions->datoms actions]
+    {:db/id :db/current-tx :matr.tx/action-name action-name}]))

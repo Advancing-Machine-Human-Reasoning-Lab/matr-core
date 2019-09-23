@@ -21,12 +21,7 @@
   "Convert a response from the codelets server into a sequence of
   transactions."
   [resp]
-  (let [transactions (->> (get resp "actionDetails")
-                          (map seq)
-                          (apply concat)
-                          (map (fn [[action-name actions]]
-                                 (actions->transaction action-name actions))))]
-    transactions))
+  (map actions->transaction resp))
 
 (defn find-justifications-to-reiterate
   "Given a sequence of node ids, return the transaction information
