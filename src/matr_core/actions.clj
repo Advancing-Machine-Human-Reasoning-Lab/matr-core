@@ -123,10 +123,12 @@
                         [?e :matr.node/parent ?rootbox]]
                       db formula rootbox)]
       {:db/id eid
+       :matr.node/flags ["checked"]
        :matr.box/_axioms rootbox}
       {:matr/kind :matr.kind/node
        :matr.node/formula formula
        :matr.node/parent rootbox
+       :matr.node/flags ["checked"]
        :matr.box/_axioms rootbox})))
 
 (defmethod action->datoms "addGoal" [db action]
@@ -151,6 +153,14 @@
                         db boxid formula)]
       {:db/id eid
        :matr.node/flags [flag]})))
+
+(defmethod action->datoms "unflag" [db action]
+  (let [{boxid "box" formula "formula" flag "flag"} action]
+    (when-let [eid (d/q '[:find ?e . :in $ ?b ?f :where
+                          [?e :matr.node/parent ?b]
+                          [?e :matr.node/formula ?f]]
+                        db boxid formula)]
+      [:db/retract eid :matr.node/flags flag])))
 
 (defn actions->datoms [db actions]
   (->>
