@@ -133,16 +133,13 @@
               (when (seq q)
                 (ajax/POST (:matr.codelet/endpoint codelet)
                            {:format :json
+                            :response-format :json
+                            :keywords? true
                             :params q
                             :handler handle-codelet-response}))))
           doall
           (map (fn [e] (when e (deref e))))
           doall))
-   @(ajax/POST "http://localhost:5002/callCodelets"
-               {:format :json
-                :params {'codeletlist codelets
-                         'nodeReq (eids->codelet-nodereqs @conn nodes)}
-                :handler handle-codelet-response})
    (reiterate-justifications nodes)
    (find-unchecked-nodes (d/q '[:find [?n ...] :where [?n :matr/kind :matr.kind/node] (not [?n :matr.node/flags "checked"])] @conn))
    (d/transact! conn (->> nodes (map #(vector :db/add % :matr.node/flags "explored")) (into [])))))

@@ -23,7 +23,8 @@
                          :db/cardinality :db.cardinality/one}
              :matr.codelet/endpoint {:db/type :db.type/string
                                      :db/cardinality :db.cardinality/one}
-             :matr.codelet/query {:db/cardninality :db.cardinality/one}})
+             :matr.codelet/query {:db/cardinality :db.cardinality/one}
+             :matr.codelet/stage {:db/cardinality :db.cardinality/one}})
 
 (defn make-initial-db []
   (let [conn (d/create-conn schema)]

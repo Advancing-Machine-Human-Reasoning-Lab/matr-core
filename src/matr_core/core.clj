@@ -2,11 +2,11 @@
   (:require [clojure.edn :as edn]
             [clojure.core.async :as async]
             [ring.adapter.jetty :refer [run-jetty]]
-            [compojure.core :refer :all]
+            [compojure.api.sweet :refer :all]
             [compojure.route :as route]
             [ring.middleware.cors :refer [wrap-cors]]
-            [ring.middleware.defaults :refer [wrap-defaults site-defaults api-defaults]]
-            [ring.middleware.json :refer [wrap-json-response wrap-json-body]]
+            [schema.core :as schema]
+            [ring.util.http-response :as resp]
             [datascript.core :as d]
             [matr-core.utils :refer [juxt-map]]
             [matr-core.db :refer [schema conn db-rootbox-query]]
@@ -73,49 +73,60 @@
 
 (defonce server (atom nil))
 
-(defroutes app-routes
-  (GET "/" [] "Hello World")
-  (context "/MATRCoreREST/rest/test" req
-           (POST "/get/json" {{axioms "axioms", goals "goals", codelets "codelets"} :body}
-                 (let [c (async/chan)]
-                   (async/>!! (:cin @server) {:type :step :reply-chan c})
-                   (async/<!! c))
-                 {:status 200
-                  :body (db->frontend-json @conn)})
-           (POST "/get/checkFormula" req
-                 {:status 200
-                  :headers {"Content-Type" "applicaton/json"}
-                  :body (str (check-formula (:body req)))})
-           (POST "/submitActions" {{actions "actions" actionName "actionName"} :body}
-                 (d/transact! conn (actions->transaction actionName actions))
-                 {:status 200})
-           (GET "/query" {{query "query", args "extra-args"} :body}
-                (if (and (string? query) (vector? args))
-                  (let [res (apply d/q (edn/read-string query) @conn args)]
-                    {:status 200
-                     :content-type "application/json"
-                     :body (if (coll? res) res (str res))})
-                  {:status 400
-                   :content-type "text/plain"
-                   :body "Invalid arguments: needs string query and vector extra-args"}))
-           (GET "/gensym" []
-                {:status 200
-                 :body (str (swap! gensym-counter inc))})
-           (POST "/registerCodelet" {{query "query" endpoint "endpoint"} :body}
-                 (d/transact! conn [{:matr/kind :matr.kind/codelet
-                                     :matr.codelet/endpoint endpoint
-                                     :matr.codelet/query query}])
-                 {:status 200}))
-  (route/not-found "Not Found"))
+(schema/defschema RegisterCodeletRequest
+  {:query schema/Str
+   :endpoint schema/Str})
+
+(schema/defschema ActionRequest
+  {:actions [schema/Any]
+   :actionName schema/Str})
+
+(schema/defschema QueryRequest
+  {:query schema/Str
+   :extra-args [schema/Any]
+   (schema/optional-key :stage) schema/Int})
 
 (def app
-  (-> #'app-routes
-      (wrap-json-body)
-      (wrap-json-response)
-      (wrap-defaults api-defaults)
-      (wrap-cors
-       :access-control-allow-origin [#".*"]
-       :access-control-allow-methods [:get :post :options])))
+  (-> 
+   (api
+    (context "/MATRCoreREST/rest/test" []
+      (POST "/stepProofer" []
+        (let [c (async/chan)]
+          (async/>!! (:cin @server) {:type :step :reply-chan c})
+          (async/<!! c))
+        (resp/ok (db->frontend-json @conn)))
+      (POST "/get/checkFormula" req
+        (resp/ok (str (check-formula (slurp (:body req))))))
+      (POST "/submitActions" []
+        :body [{:keys [actions actionName]} ActionRequest]
+        (clojure.pprint/pprint actions)
+        (d/transact! conn (actions->transaction actionName actions))
+        {:status 200})
+      (GET "/query" []
+        :body [{query :query, args :extra-args} QueryRequest]
+        (let [res (apply d/q (edn/read-string query) @conn args)]
+          (resp/ok (if (coll? res) res (str res)))))
+      (POST "/query" []
+        :body [{query :query, args :extra-args} QueryRequest]
+        (let [res (apply d/q (edn/read-string query) @conn args)]
+          (resp/ok (if (coll? res) res (str res)))))
+      (GET "/gensym" []
+        :return schema/Int
+        :summary "Return a fresh integer for use in symbol generation"
+        (resp/ok (swap! gensym-counter inc)))
+      (POST "/registerCodelet" []
+        :body [{:keys [query endpoint stage] :or {stage 0}} RegisterCodeletRequest]
+        :summary "Register a codelet"
+        (d/transact! conn [{:matr/kind :matr.kind/codelet
+                            :matr.codelet/endpoint endpoint
+                            :matr.codelet/query query
+                            :matr.codelet/stage stage}])
+        (resp/ok))
+      (undocumented
+       (route/not-found {:not "found"}))))
+   (wrap-cors
+    :access-control-allow-origin [#".*"]
+    :access-control-allow-methods [:get :post :options])))
 
 (defn start-server! [& []]
   (let [inp (async/chan)]
@@ -133,7 +144,7 @@
                       (async/>! (:reply-chan message) :error!)))
                   (recur))
           :exit (when-let [s @server]
-                  (.stop s)
+                  (.stop (:server s))
                   (reset! server nil)))))
     (reset! server
             {:server (run-jetty
