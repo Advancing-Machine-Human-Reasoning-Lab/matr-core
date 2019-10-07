@@ -91,5 +91,5 @@
                                ?al]
                               [(set ?al) ?antecedent-formulas]])
 
-(def db-codelets-query '[:find [(pull ?c [:matr.codelet/endpoint :matr.codelet/query]) ...] :where
+(def db-codelets-query '[:find [(pull ?c [:matr.codelet/endpoint :matr.codelet/query :matr.codelet/stage]) ...] :where
                          [?c :matr/kind :matr.kind/codelet]])

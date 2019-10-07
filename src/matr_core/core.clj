@@ -90,6 +90,11 @@
   (-> 
    (api
     (context "/MATRCoreREST/rest/test" []
+      (POST "/get/json" []
+        (let [c (async/chan)]
+          (async/>!! (:cin @server) {:type :step :reply-chan c})
+          (async/<!! c))
+        (resp/ok (db->frontend-json @conn)))
       (POST "/stepProofer" []
         (let [c (async/chan)]
           (async/>!! (:cin @server) {:type :step :reply-chan c})

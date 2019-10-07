@@ -128,18 +128,22 @@
   ([nodes] (step-proofer ["ALL"] nodes))
   ([codelets nodes]
    (let [db @conn]
-     (->> (for [codelet (d/q db-codelets-query db)]
-            (let [q (d/q (edn/read-string (:matr.codelet/query codelet)) db)]
-              (when (seq q)
+     (doseq [[stage codelets] (->> (d/q db-codelets-query db)
+                                   (group-by :matr.codelet/stage)
+                                   (into (sorted-map)))]
+
+       (->> (for [codelet codelets]
+              (when-let [q (seq (d/q (edn/read-string (:matr.codelet/query codelet)) db))]
                 (ajax/POST (:matr.codelet/endpoint codelet)
                            {:format :json
                             :response-format :json
                             :keywords? true
-                            :params q
-                            :handler handle-codelet-response}))))
-          doall
-          (map (fn [e] (when e (deref e))))
-          doall))
+                            :params (into [] q)
+                            :handler handle-codelet-response})))
+            (filter identity)
+            doall
+            (map deref)
+            doall)))
    (reiterate-justifications nodes)
    (find-unchecked-nodes (d/q '[:find [?n ...] :where [?n :matr/kind :matr.kind/node] (not [?n :matr.node/flags "checked"])] @conn))
    (d/transact! conn (->> nodes (map #(vector :db/add % :matr.node/flags "explored")) (into [])))))
