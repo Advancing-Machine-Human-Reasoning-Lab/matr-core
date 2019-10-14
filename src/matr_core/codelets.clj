@@ -85,9 +85,15 @@
 
 (defn handle-codelet-response
   "Convert and run the actions returned by the codelet server."
-  [resp]
-  (doseq [transaction (codelet-response->transactions resp)]
-    (d/transact! conn transaction)))
+  [codelet iteration-tx]
+  (fn [resp]
+    (doseq [transaction (codelet-response->transactions resp)]
+      (try
+        (d/transact! conn (concat transaction [[:db/add (:db/id codelet) :matr.codelet/transaction-since iteration-tx]]))
+        (catch Exception e
+          (println "Whelp, that didn't go well.")
+          (println (.getMessage e))
+          (.printStackTrace e))))))
 
 (defn reiterate-justifications
   "Reiterate any justifications from parent boxes applicable to the given nodes."
@@ -127,23 +133,24 @@
                                  @conn)))
   ([nodes] (step-proofer ["ALL"] nodes))
   ([codelets nodes]
-   (let [db @conn]
+   (let [db @conn
+         tx (:max-tx db)]
      (doseq [[stage codelets] (->> (d/q db-codelets-query db)
                                    (group-by :matr.codelet/stage)
                                    (into (sorted-map)))]
-
-       (->> (for [codelet codelets]
-              (when-let [q (seq (d/q (edn/read-string (:matr.codelet/query codelet)) db))]
-                (ajax/POST (:matr.codelet/endpoint codelet)
-                           {:format :json
-                            :response-format :json
-                            :keywords? true
-                            :params (into [] q)
-                            :handler handle-codelet-response})))
-            (filter identity)
-            doall
-            (map deref)
-            doall)))
+       (let [db @conn] ; Each stage needs to be able to see the changes since the previous stage
+         (->> (for [codelet codelets]
+                (when-let [q (seq (d/q (edn/read-string (:matr.codelet/query codelet)) db))]
+                  (ajax/POST (:matr.codelet/endpoint codelet)
+                             {:format :json
+                              :response-format :json
+                              :keywords? true
+                              :params (into [] q)
+                              :handler (handle-codelet-response codelet tx)})))
+              (filter identity)
+              doall
+              (map deref)
+              doall))))
    (reiterate-justifications nodes)
    (find-unchecked-nodes (d/q '[:find [?n ...] :where [?n :matr/kind :matr.kind/node] (not [?n :matr.node/flags "checked"])] @conn))
    (d/transact! conn (->> nodes (map #(vector :db/add % :matr.node/flags "explored")) (into [])))))

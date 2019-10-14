@@ -75,16 +75,17 @@
 
 (schema/defschema RegisterCodeletRequest
   {:query schema/Str
-   :endpoint schema/Str})
+   :endpoint schema/Str
+   (schema/optional-key :stage) schema/Int
+   (schema/optional-key :since) schema/Bool})
 
 (schema/defschema ActionRequest
-  {:actions [schema/Any]
+  {:actions [Action]
    :actionName schema/Str})
 
 (schema/defschema QueryRequest
   {:query schema/Str
-   :extra-args [schema/Any]
-   (schema/optional-key :stage) schema/Int})
+   :extra-args [schema/Any]})
 
 (def app
   (-> 
@@ -120,12 +121,14 @@
         :summary "Return a fresh integer for use in symbol generation"
         (resp/ok (swap! gensym-counter inc)))
       (POST "/registerCodelet" []
-        :body [{:keys [query endpoint stage] :or {stage 0}} RegisterCodeletRequest]
+        :body [{:keys [query endpoint stage since] :or {stage 0 since false}} RegisterCodeletRequest]
         :summary "Register a codelet"
         (d/transact! conn [{:matr/kind :matr.kind/codelet
                             :matr.codelet/endpoint endpoint
                             :matr.codelet/query query
-                            :matr.codelet/stage stage}])
+                            :matr.codelet/stage stage
+                            :matr.codelet/query-include-since since
+                            :matr.codelet/transaction-since d/tx0}])
         (resp/ok))
       (undocumented
        (route/not-found {:not "found"}))))

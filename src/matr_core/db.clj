@@ -24,7 +24,15 @@
              :matr.codelet/endpoint {:db/type :db.type/string
                                      :db/cardinality :db.cardinality/one}
              :matr.codelet/query {:db/cardinality :db.cardinality/one}
-             :matr.codelet/stage {:db/cardinality :db.cardinality/one}})
+             :matr.codelet/stage {:db/cardinality :db.cardinality/one}
+             :matr.codelet/query-include-since {:db/type :db.type/boolean
+                                                :db/cardinality :db.cardinality/one}
+             :matr.codelet/last-query-tx {:db/type :db.type/ref
+                                          :db/cardinality :db.cardinality/one}
+             :matr.symbol/name {:db/cardinality :db.cardinality/one
+                                :db/type :db.type/string
+                                :db/unique :db.unique/identity}
+             :matr.symbol/type {:db/type :db.type/string}})
 
 (defn make-initial-db []
   (let [conn (d/create-conn schema)]
@@ -91,5 +99,5 @@
                                ?al]
                               [(set ?al) ?antecedent-formulas]])
 
-(def db-codelets-query '[:find [(pull ?c [:matr.codelet/endpoint :matr.codelet/query :matr.codelet/stage]) ...] :where
+(def db-codelets-query '[:find [(pull ?c [:db/id :matr.codelet/endpoint :matr.codelet/query :matr.codelet/stage]) ...] :where
                          [?c :matr/kind :matr.kind/codelet]])

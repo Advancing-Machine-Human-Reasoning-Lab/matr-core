@@ -44,9 +44,34 @@
     (for [anteceedent anteceedents]
       (process-justification-anteceedent db boxid anteceedent anteceedent-nodes-map))))
 
-(defmethod action->datoms "add_justification" [db action]
-  (let [{boxid :box, :keys [antecedents consequence name local-id]} action
-        consequentIdMap (db-nodes-query db boxid [consequence])
+(defn all-newsyms [db newsyms antecedents]
+  (letfn [(newsym-name [sym]
+            (if (string? sym)
+              sym
+              (:name sym)))
+          (coerce-newsym [sym]
+            (if (string? sym)
+              {:matr/kind :matr.kind/symbol
+               :matr.symbol/name sym}
+              {:matr/kind :matr.kind/symbol
+               :matr.symbol/name (:name sym)
+               :matr.symbol/type (:type sym)}))]
+    (let [newsyms (->> antecedents
+                       (map :newsyms)
+                       (concat newsyms))]
+      (assert (not (seq (d/q '[:find ?s :in $ [?name ...] :where
+                               [?s :matr/kind :matr.kind/symbol]
+                               [?s :matr.symbol/name ?n]]
+                             db
+                             (map newsym-name newsyms))))
+              "Some syms already existed")
+      (->> newsyms
+           (map coerce-newsym)
+           (into [])))))
+(defmethod action->datoms "add_justification"
+  [db {boxid :box, :keys [antecedents consequence name local-id newsyms]}]
+  (check-safe-newsyms antecedents newsyms)
+  (let [consequentIdMap (db-nodes-query db boxid [consequence])
         antecedent-formula (->> antecedents
                                 (map #(get % :formula))
                                 (into #{}))
@@ -58,69 +83,109 @@
                              :db/id consequence
                              :matr.node/formula consequence
                              :matr.node/parent boxid})
-            antecedents (process-justification-anteceedents db boxid antecedents)]
-        {:db/id local-id
-         :matr/kind :matr.kind/justification
-         :matr.justification/inference-name name
-         :matr.node/consequents consequence
-         :matr.node/_consequents antecedents
-         :matr.node/parent boxid}))))
+            antecedents (process-justification-anteceedents db boxid antecedents)
+            newsyms (all-newsyms db antecedents newsyms)]
+        (conj newsyms
+              {:db/id local-id
+               :matr/kind :matr.kind/justification
+               :matr.justification/inference-name name
+               :matr.node/consequents consequence
+               :matr.node/_consequents antecedents
+               :matr.node/parent boxid})))))
 
 (defmethod action->datoms "add_box" [db action]
   nil)
 
-(defmethod action->datoms "addAxiom" [db action]
-  (let [rootbox (db-rootbox-query db)
-        formula (get action :formula)]
+(schema/defschema AddAxiomAction
+  {:action (schema/eq "addAxiom")
+   :formula schema/Str})
+
+(defmethod action->datoms "addAxiom"
+  [db {:keys [formula]}]
+  (let [rootbox (db-rootbox-query db)]
     (if-let [eid (d/q '[:find ?e . :in $ ?f ?rootbox :where
                         [?e :matr.node/formula ?f]
                         [?e :matr.node/parent ?rootbox]]
                       db formula rootbox)]
-      {:db/id eid
-       :matr.node/flags ["checked"]
-       :matr.box/_axioms rootbox}
-      {:matr/kind :matr.kind/node
-       :matr.node/formula formula
-       :matr.node/parent rootbox
-       :matr.node/flags ["checked"]
-       :matr.box/_axioms rootbox})))
+      [{:db/id eid
+        :matr.node/flags ["checked"]
+        :matr.box/_axioms rootbox}]
+      [{:matr/kind :matr.kind/node
+        :matr.node/formula formula
+        :matr.node/parent rootbox
+        :matr.node/flags ["checked"]
+        :matr.box/_axioms rootbox}])))
 
-(defmethod action->datoms "addGoal" [db action]
-  (let [rootbox (db-rootbox-query db)
-        formula (get action :formula)]
+(schema/defschema AddGoalAction
+  {:action (schema/eq "addGoal")
+   :formula schema/Str})
+
+(defmethod action->datoms "addGoal"
+  [db {:keys [formula]}]
+  (let [rootbox (db-rootbox-query db)]
     (if-let [eid (d/q '[:find ?e . :in $ ?f ?rootbox :where
                         [?e :matr.node/formula ?f]
                         [?e :matr.node/parent ?rootbox]]
                       db formula rootbox)]
-      {:db/id eid
-       :matr.box/_goals rootbox}
-      {:matr/kind :matr.kind/node
-       :matr.node/formula formula
-       :matr.node/parent rootbox
-       :matr.box/_goals rootbox})))
+      [{:db/id eid
+        :matr.box/_goals rootbox}]
+      [{:matr/kind :matr.kind/node
+        :matr.node/formula formula
+        :matr.node/parent rootbox
+        :matr.box/_goals rootbox}])))
 
-(defmethod action->datoms "flag" [db action]
-  (let [{:keys [boxid formula flag]} action]
-    (when-let [eid (d/q '[:find ?e . :in $ ?b ?f :where
-                          [?e :matr.node/parent ?b]
-                          [?e :matr.node/formula ?f]]
-                        db boxid formula)]
-      {:db/id eid
-       :matr.node/flags [flag]})))
+(schema/defschema FlagAction
+  {:action (schema/enum "flag" "unflag")
+   :box schema/Int
+   :formula schema/Str
+   :flag schema/Str})
 
-(defmethod action->datoms "unflag" [db action]
-  (let [{:keys [boxid formula flag]} action]
-    (when-let [eid (d/q '[:find ?e . :in $ ?b ?f :where
-                          [?e :matr.node/parent ?b]
-                          [?e :matr.node/formula ?f]]
-                        db boxid formula)]
-      [:db/retract eid :matr.node/flags flag])))
+(defmethod action->datoms "flag"
+  [db {boxid :box, :keys [formula flag]}]
+  (when-let [eid (d/q '[:find ?e . :in $ ?b ?f :where
+                        [?e :matr.node/parent ?b]
+                        [?e :matr.node/formula ?f]]
+                      db boxid formula)]
+    [[:db/add eid :matr.node/flags flag]]))
+
+(defmethod action->datoms "unflag"
+  [db {boxid :box :keys [formula flag]}]
+  (when-let [eid (d/q '[:find ?e . :in $ ?b ?f :where
+                        [?e :matr.node/parent ?b]
+                        [?e :matr.node/formula ?f]]
+                      db boxid formula)]
+    [[:db/retract eid :matr.node/flags flag]]))
+
+(schema/defschema FlagEntityAction
+  {:action (schema/enum "flagEntity" "unflagEntity")
+   :eid schema/Int
+   :flag schema/Str})
+
+(defmethod action->datoms "flagEntity"
+  [db {:keys [eid flag]}]
+  [[:db/add eid :matr.node/flags flag]])
+
+(defmethod action->datoms "unflagEntity"
+  [db {:keys [eid flag]}]
+  [[:db/retract eid :matr.node/flags flag]])
+
+(schema/defschema AddSymbolAction
+  {:action (schema/eq "add_symbol")
+   :name schema/Str
+   :type schema/Str})
+
+(defmethod action->datoms "add_symbol"
+  [db {:keys [name type]}]
+  (when-not (d/entity db [:matr.symbol/name name])
+    [{:matr/kind :matr.kind/symbol
+      :matr.symbol/name name
+      :matr.symbol/type type}]))
 
 (defn actions->datoms [db actions]
   (->>
    actions
    (map #(action->datoms db %))
-   (remove nil?)
+   (apply concat)
    (into [])))
 
 (defn actions->transaction

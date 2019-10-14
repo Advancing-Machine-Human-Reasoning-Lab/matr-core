@@ -1,4 +1,5 @@
-(ns matr-core.utils)
+(ns matr-core.utils
+  (:require [datascript.core :as d]))
 
 (defn juxt-map
   "Given a map j from keys k to functions f and an object e, return new
@@ -9,3 +10,8 @@
   curried form."
   ([j e] (into {} (map (fn [[k f]] [k (f e)]) j)))
   ([j] (fn [e] (juxt-map j e))))
+
+(defn db-since
+  "Filter a db to just the datoms after a particular transaction."
+  [db tx]
+  (d/filter db (fn [db datom] (< tx (:tx datom)))))
