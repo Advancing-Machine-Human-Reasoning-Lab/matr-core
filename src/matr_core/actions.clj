@@ -70,7 +70,6 @@
            (into [])))))
 (defmethod action->datoms "add_justification"
   [db {boxid :box, :keys [antecedents consequence name local-id newsyms]}]
-  (check-safe-newsyms antecedents newsyms)
   (let [consequentIdMap (db-nodes-query db boxid [consequence])
         antecedent-formula (->> antecedents
                                 (map #(get % :formula))
