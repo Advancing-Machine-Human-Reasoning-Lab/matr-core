@@ -10,7 +10,7 @@
             [datascript.core :as d]
             [matr-core.utils :refer [juxt-map]]
             [matr-core.db :refer [schema conn db-rootbox-query]]
-            [matr-core.actions :refer [actions->transaction]]
+            [matr-core.actions :refer [actions->transaction Action]]
             [matr-core.codelets :refer [step-proofer]])
   (:gen-class))
 

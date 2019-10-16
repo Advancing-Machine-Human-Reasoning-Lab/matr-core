@@ -3,9 +3,10 @@
    [clojure.edn :as edn]
    [ajax.core :as ajax]
    [datascript.core :as d]
-   [matr-core.utils :refer [juxt-map]]
+   [schema.core :as schema]
+   [matr-core.utils :refer [juxt-map db-since]]
    [matr-core.db :refer [schema conn db-codelets-query db-justification-query]]
-   [matr-core.actions :refer [actions->transaction]]))
+   [matr-core.actions :refer [actions->transaction Action]]))
 
 ;;;; Pure functions over db
 
@@ -21,7 +22,9 @@
   "Convert a response from the codelets server into a sequence of
   transactions."
   [resp]
-  (map actions->transaction resp))
+  (->> resp
+       (schema/validate [[Action]])
+       (map actions->transaction)))
 
 (defn find-justifications-to-reiterate
   "Given a sequence of node ids, return the transaction information
