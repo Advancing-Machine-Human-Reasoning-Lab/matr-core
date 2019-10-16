@@ -1,6 +1,7 @@
 (ns matr-core.actions
   (:require
    [datascript.core :as d]
+   [schema.core :as schema]
    [matr-core.db :refer [db-rootbox-query db-nodes-query run-db-box-from-axioms-query
                          db-justification-query pull-all-axioms]]))
 
@@ -68,6 +69,23 @@
       (->> newsyms
            (map coerce-newsym)
            (into [])))))
+
+(schema/defschema NewSym
+  (schema/cond-pre schema/Str
+                   {:name schema/Str
+                    :type schema/Str}))
+
+(schema/defschema JustificationAction
+  {:action (schema/eq "add_justification")
+   :box schema/Int
+   :antecedents [{:formula schema/Str
+                  :newsyms [NewSym]
+                  :newaxioms [schema/Str]}]
+   :consequence schema/Str
+   :name schema/Str
+   (schema/optional-key :local-id) schema/Any
+   (schema/optional-key :newsyms) [NewSym]})
+
 (defmethod action->datoms "add_justification"
   [db {boxid :box, :keys [antecedents consequence name local-id newsyms]}]
   (let [consequentIdMap (db-nodes-query db boxid [consequence])
@@ -194,3 +212,12 @@
   ([action-name actions]
    [[:db.fn/call #'matr-core.actions/actions->datoms actions]
     {:db/id :db/current-tx :matr.tx/action-name action-name}]))
+
+(schema/defschema Action
+  (schema/conditional
+   (comp #(= "add_justification" %) :action) JustificationAction
+   (comp #(= "addAxiom" %) :action) AddAxiomAction
+   (comp #(= "addGoal" %) :action) AddGoalAction
+   (comp #{"flag" "unflag"} :action) FlagAction
+   (comp #{"flagEntity" "unflagEntity"} :action) FlagEntityAction
+   (comp #(= "add_symbol" %) :action) AddSymbolAction))
