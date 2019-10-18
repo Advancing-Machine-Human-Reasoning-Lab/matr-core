@@ -107,7 +107,7 @@
         :body [{:keys [actions actionName]} ActionRequest]
         (clojure.pprint/pprint actions)
         (d/transact! conn (actions->transaction actionName actions))
-        {:status 200})
+        (resp/ok))
       (GET "/query" []
         :body [{query :query, args :extra-args} QueryRequest]
         (let [res (apply d/q (edn/read-string query) @conn args)]
