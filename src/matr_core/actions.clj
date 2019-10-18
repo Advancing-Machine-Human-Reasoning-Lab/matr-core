@@ -59,7 +59,8 @@
                :matr.symbol/type (:type sym)}))]
     (let [newsyms (->> antecedents
                        (map :newsyms)
-                       (concat newsyms))]
+                       (cons newsyms)
+                       (apply concat))]
       (assert (not (seq (d/q '[:find ?s :in $ [?name ...] :where
                                [?s :matr/kind :matr.kind/symbol]
                                [?s :matr.symbol/name ?n]]
@@ -100,8 +101,8 @@
                              :db/id consequence
                              :matr.node/formula consequence
                              :matr.node/parent boxid})
-            antecedents (process-justification-anteceedents db boxid antecedents)
-            newsyms (all-newsyms db antecedents newsyms)]
+            newsyms (all-newsyms db newsyms antecedents)
+            antecedents (process-justification-anteceedents db boxid antecedents)]
         (conj newsyms
               {:db/id local-id
                :matr/kind :matr.kind/justification
