@@ -63,7 +63,7 @@
                        (apply concat))]
       (assert (not (seq (d/q '[:find ?s :in $ [?name ...] :where
                                [?s :matr/kind :matr.kind/symbol]
-                               [?s :matr.symbol/name ?n]]
+                               [?s :matr.symbol/name ?name]]
                              db
                              (map newsym-name newsyms))))
               "Some syms already existed")
