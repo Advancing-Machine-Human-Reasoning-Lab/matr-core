@@ -143,7 +143,11 @@
                                    (into (sorted-map)))]
        (let [db @conn] ; Each stage needs to be able to see the changes since the previous stage
          (->> (for [codelet codelets]
-                (when-let [q (seq (d/q (edn/read-string (:matr.codelet/query codelet)) db))]
+                (when-let [q (seq (if (:matr.codelet/query-include-since codelet)
+                                    (d/q (edn/read-string (:matr.codelet/query codelet))
+                                         db
+                                         (db-since db (or (:matr.codelet/last-query-tx codelet) d/tx0)))
+                                    (d/q (edn/read-string (:matr.codelet/query codelet)) db)))]
                   (ajax/POST (:matr.codelet/endpoint codelet)
                              {:format :json
                               :response-format :json
