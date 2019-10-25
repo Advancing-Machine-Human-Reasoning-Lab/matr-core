@@ -155,6 +155,6 @@
               doall
               (map deref)
               doall))))
-   (reiterate-justifications nodes)
+   ;; (reiterate-justifications nodes)
    (find-unchecked-nodes (d/q '[:find [?n ...] :where [?n :matr/kind :matr.kind/node] (not [?n :matr.node/flags "checked"])] @conn))
    (d/transact! conn (->> nodes (map #(vector :db/add % :matr.node/flags "explored")) (into [])))))
