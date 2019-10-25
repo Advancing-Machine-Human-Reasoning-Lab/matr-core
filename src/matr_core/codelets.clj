@@ -104,29 +104,26 @@
   (d/transact! conn (find-justifications-to-reiterate @conn nodes)))
 
 (defn find-unchecked-nodes 
- [uncheckedNodes]
- (let [curAxioms (set (d/q '[:find [?a ...] :where [?n :matr/kind :matr.kind/box] [?n :matr.box/axioms ?a]] @conn))]
-   (doseq [x (vec (rseq (vec (sort uncheckedNodes))))]  
-     ; when x is not an axiom
-     (when (not (contains? curAxioms x))
-       ; iterate over the justifications of x 
-       (doseq [y (d/q '[:find [?ant ...] :in $ ?cons :where 
-                              [?ant :matr/kind :matr.kind/justification] 
-                              [?ant :matr.node/consequents ?cons]] @conn x)]
-        ; find antecs nodes of justification that are not checked 
-         (let [antecs (d/q '[:find [?n ...] :in $ ?j :where 
-                             [?n :matr/kind :matr.kind/node]
-                             [?n :matr.node/consequents ?j]
-                             (not [?n :matr.node/flags "checked"])] @conn y)]
-          ; when difference of {unchecked antecs of just y} and {axioms} is empty
-           (when (= #{} (clojure.set/difference (set antecs) curAxioms))
-            ; when set of all checked nodes does not contain node x
-             (when (not (contains? (set (d/q '[:find [?n ...] :where 
-                                               [?n :matr/kind :matr.kind/node] 
-                                               [?n :matr.node/flags "checked"]] 
-                                          @conn)) x))
-               (d/transact! conn [[:db/add x :matr.node/flags "checked"]])))))))))
-  
+  [uncheckedNodes]
+  (let [curAxioms (set (d/q '[:find [?a ...] :where [?n :matr/kind :matr.kind/box] [?n :matr.box/axioms ?a]] @conn))]
+    (doseq [x (vec (rseq (vec (sort uncheckedNodes))))]  
+                                        ; iterate over the justifications of x 
+      (doseq [y (d/q '[:find [?ant ...] :in $ ?cons :where 
+                       [?ant :matr/kind :matr.kind/justification] 
+                       [?ant :matr.node/consequents ?cons]] @conn x)]
+                                        ; find antecs nodes of justification that are not checked 
+        (let [antecs (d/q '[:find [?n ...] :in $ ?j :where 
+                            [?n :matr.node/consequents ?j]
+                            (not [?n :matr.node/flags "checked"])] @conn y)]
+                                        ; when difference of {unchecked antecs of just y} and {axioms} is empty
+          (when (= #{} (clojure.set/difference (set antecs) curAxioms))
+                                        ; when set of all checked nodes does not contain node x
+            (when (not (contains? (set (d/q '[:find [?n ...] :where 
+                                              [?n :matr/kind :matr.kind/node] 
+                                              [?n :matr.node/flags "checked"]] 
+                                            @conn)) x))
+              (d/transact! conn [[:db/add x :matr.node/flags "checked"]]))))))))
+
 (defn step-proofer
   "Explore unexplored nodes by sending them to the codelets server and
   reiterating justifications applicable to them."
