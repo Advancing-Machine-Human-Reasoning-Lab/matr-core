@@ -2,6 +2,7 @@
   (:require
    [datascript.core :as d]
    [schema.core :as schema]
+   [taoensso.timbre :as timbre :refer [log spy]]
    [matr-core.db :refer [db-rootbox-query db-nodes-query run-db-box-from-axioms-query
                          db-justification-query pull-all-axioms]]))
 

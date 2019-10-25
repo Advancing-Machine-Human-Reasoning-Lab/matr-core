@@ -4,6 +4,7 @@
    [ajax.core :as ajax]
    [datascript.core :as d]
    [schema.core :as schema]
+   [taoensso.timbre :as timbre :refer [log spy]]
    [matr-core.utils :refer [juxt-map db-since]]
    [matr-core.db :refer [schema conn db-codelets-query db-justification-query]]
    [matr-core.actions :refer [actions->transaction Action]]))
@@ -90,13 +91,12 @@
   "Convert and run the actions returned by the codelet server."
   [codelet iteration-tx]
   (fn [resp]
-    (doseq [transaction (codelet-response->transactions resp)]
-      (try
-        (d/transact! conn (concat transaction [[:db/add (:db/id codelet) :matr.codelet/transaction-since iteration-tx]]))
-        (catch Exception e
-          (println "Whelp, that didn't go well.")
-          (println (.getMessage e))
-          (.printStackTrace e))))))
+    (try
+      (doseq [transaction (codelet-response->transactions resp)]
+        (d/transact! conn (concat (spy :debug transaction)
+                                  [[:db/add (:db/id codelet) :matr.codelet/transaction-since iteration-tx]])))
+      (catch Exception e
+        (log :debug e)))))
 
 (defn reiterate-justifications
   "Reiterate any justifications from parent boxes applicable to the given nodes."
