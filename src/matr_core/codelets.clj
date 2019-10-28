@@ -136,8 +136,9 @@
    (let [db @conn
          tx (:max-tx db)]
      (doseq [[stage codelets] (->> (d/q db-codelets-query db)
-                                   (group-by :matr.codelet/stage)
-                                   (into (sorted-map)))]
+                                   (reduce (fn [m [k v]]
+                                             (update m k (fnil conj []) v))
+                                           (sorted-map)))]
        (let [db @conn] ; Each stage needs to be able to see the changes since the previous stage
          (->> (for [codelet codelets]
                 (when-let [q (seq (if (:matr.codelet/query-include-since codelet)
