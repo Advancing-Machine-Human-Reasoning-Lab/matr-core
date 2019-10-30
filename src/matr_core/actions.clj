@@ -81,9 +81,10 @@
 (schema/defschema JustificationAction
   {:action (schema/eq "add_justification")
    :box schema/Int
-   :antecedents [{:formula schema/Str
-                  :newsyms [NewSym]
-                  :newaxioms [schema/Str]}]
+   :antecedents [(schema/either schema/Int
+                                {:formula schema/Str
+                                 :newsyms [NewSym]
+                                 :newaxioms [schema/Str]})]
    :consequence schema/Str
    :name schema/Str
    (schema/optional-key :local-id) schema/Any
@@ -93,9 +94,13 @@
   [db {boxid :box, :keys [antecedents consequence name local-id newsyms]}]
   (let [consequentIdMap (db-nodes-query db boxid [consequence])
         antecedent-formula (->> antecedents
-                                (map #(get % :formula))
+                                (remove number?)
+                                (map :formula)
                                 (into #{}))
-        justification (d/q db-justification-query db boxid name antecedent-formula consequence)]
+        antecedent-ids (->> antecedents
+                            (filter number?)
+                            (into #{}))
+        justification (d/q db-justification-query db boxid name antecedent-ids antecedent-formula consequence)]
     (when-not justification
       (let [anteceedentIdMap (db-nodes-query db boxid antecedents)
             consequence (or (consequentIdMap consequence)
@@ -110,7 +115,7 @@
                :matr/kind :matr.kind/justification
                :matr.justification/inference-name name
                :matr.node/consequents consequence
-               :matr.node/_consequents antecedents
+               :matr.node/_consequents (concat antecedent-ids antecedents)
                :matr.node/parent boxid})))))
 
 (defmethod action->datoms "add_box" [db action]

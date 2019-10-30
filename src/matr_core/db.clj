@@ -85,19 +85,26 @@
       axioms-pull->axioms
       set))
 
-(def db-justification-query '[:find ?sj . :in $ ?box ?inference ?antecedent-formulas ?consequent-formula :where
+(def db-justification-query '[:find ?sj . :in $ ?box ?inference ?antecedent-nodes ?antecedent-formulas ?consequent-formula :where
                               [?c :matr.node/formula ?consequent-formula]
                               [?c :matr.node/parent ?box]
                               [?sj :matr.node/parent ?box]
                               [?sj :matr/kind :matr.kind/justification]
                               [?sj :matr.node/consequents ?c]
                               [?sj :matr.justification/inference-name ?inference]
-                              [(datascript.core/q [:find [?saf ...] :in $ ?sj :where
+                              [(datascript.core/q [:find [?saf ...] :in $ ?sj ?antecedent-nodes :where
                                                    [?s :matr.node/consequents ?sj]
-                                                   [?s :matr.node/formula ?saf]]
-                                                  $ ?sj)
-                               ?al]
-                              [(set ?al) ?antecedent-formulas]])
+                                                   [?s :matr.node/formula ?saf]
+                                                   (not [(get ?antecedent-nodes ?s)])]
+                                                  $ ?sj ?antecedent-nodes)
+                               ?afl]
+                              [(set ?afl) ?antecedent-formulas]
+                              [(datascript.core/q [:find [?s ...] :in $ ?sj ?antecedent-nodes :where
+                                                   [?s :matr.node/consequents ?sj]
+                                                   [(get ?antecedent-nodes ?s)]]
+                                                  $ ?sj ?antecedent-nodes)
+                               ?anl]
+                              [(set ?anl) ?antecedent-nodes]])
 
 (def db-codelets-query '[:find ?stage (pull ?c [:db/id :matr.codelet/endpoint
                                                 :matr.codelet/query
