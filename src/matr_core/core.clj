@@ -5,9 +5,13 @@
             [compojure.api.sweet :refer :all]
             [compojure.route :as route]
             [ring.middleware.cors :refer [wrap-cors]]
+            [ring.middleware.multipart-params.byte-array :refer [byte-array-store]]
+            [compojure.api.upload :as upload]
             [schema.core :as schema]
             [ring.util.http-response :as resp]
             [datascript.core :as d]
+            [taoensso.timbre :as timbre :refer [log spy]]
+            [yaml.core :as yaml]
             [matr-core.utils :refer [juxt-map]]
             [matr-core.db :refer [schema conn db-rootbox-query]]
             [matr-core.actions :refer [actions->transaction Action]]
@@ -87,10 +91,28 @@
   {:query schema/Str
    :extra-args [schema/Any]})
 
+(defn register-codelet! [query endpoint stage since]
+  (d/transact! conn [{:matr/kind :matr.kind/codelet
+                      :matr.codelet/endpoint endpoint
+                      :matr.codelet/query query
+                      :matr.codelet/stage stage
+                      :matr.codelet/query-include-since since
+                      :matr.codelet/transaction-since d/tx0}]))
+
+(defn process-config [{:keys [codelets actions]}]
+  (doseq [{:keys [query endpoint stage since]} codelets]
+    (register-codelet! query endpoint stage since))
+  (d/transact! (actions->transaction actions)))
+
 (def app
   (-> 
    (api
     (context "/MATRCoreREST/rest/test" []
+      (POST "/config" []
+        :multipart-params [f :- upload/ByteArrayUpload]
+        :middleware [#(upload/wrap-multipart-params % {:store (byte-array-store)})]
+        (spy (yaml/parse-string (slurp (:bytes f)) :keywords true))
+        (resp/ok "Foo!"))
       (POST "/get/json" []
         (let [c (async/chan)]
           (async/>!! (:cin @server) {:type :step :reply-chan c})
@@ -123,12 +145,7 @@
       (POST "/registerCodelet" []
         :body [{:keys [query endpoint stage since] :or {stage 0 since false}} RegisterCodeletRequest]
         :summary "Register a codelet"
-        (d/transact! conn [{:matr/kind :matr.kind/codelet
-                            :matr.codelet/endpoint endpoint
-                            :matr.codelet/query query
-                            :matr.codelet/stage stage
-                            :matr.codelet/query-include-since since
-                            :matr.codelet/transaction-since d/tx0}])
+        (register-codelet! query endpoint stage since)
         (resp/ok))
       (undocumented
        (route/not-found {:not "found"}))))
