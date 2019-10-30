@@ -81,10 +81,10 @@
 (schema/defschema JustificationAction
   {:action (schema/eq "add_justification")
    :box schema/Int
-   :antecedents [(schema/either schema/Int
-                                {:formula schema/Str
-                                 :newsyms [NewSym]
-                                 :newaxioms [schema/Str]})]
+   :antecedents [(schema/cond-pre schema/Int
+                                  {:formula schema/Str
+                                   :newsyms [NewSym]
+                                   :newaxioms [schema/Str]})]
    :consequence schema/Str
    :name schema/Str
    (schema/optional-key :local-id) schema/Any
@@ -93,8 +93,8 @@
 (defmethod action->datoms "add_justification"
   [db {boxid :box, :keys [antecedents consequence name local-id newsyms]}]
   (let [consequentIdMap (db-nodes-query db boxid [consequence])
-        antecedent-formula (->> antecedents
-                                (remove number?)
+        complex-antecedents (remove number? antecedents)
+        antecedent-formula (->> complex-antecedents
                                 (map :formula)
                                 (into #{}))
         antecedent-ids (->> antecedents
@@ -102,14 +102,14 @@
                             (into #{}))
         justification (d/q db-justification-query db boxid name antecedent-ids antecedent-formula consequence)]
     (when-not justification
-      (let [anteceedentIdMap (db-nodes-query db boxid antecedents)
+      (let [anteceedentIdMap (db-nodes-query db boxid complex-antecedents)
             consequence (or (consequentIdMap consequence)
                             {:matr/kind :matr.kind/node
                              :db/id consequence
                              :matr.node/formula consequence
                              :matr.node/parent boxid})
             newsyms (all-newsyms db newsyms antecedents)
-            antecedents (process-justification-anteceedents db boxid antecedents)]
+            antecedents (process-justification-anteceedents db boxid complex-antecedents)]
         (conj newsyms
               {:db/id local-id
                :matr/kind :matr.kind/justification
