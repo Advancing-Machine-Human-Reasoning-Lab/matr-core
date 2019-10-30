@@ -95,13 +95,13 @@
                               [(datascript.core/q [:find [?saf ...] :in $ ?sj ?antecedent-nodes :where
                                                    [?s :matr.node/consequents ?sj]
                                                    [?s :matr.node/formula ?saf]
-                                                   (not [(get ?antecedent-nodes ?s)])]
+                                                   (not [(contains? ?antecedent-nodes ?s) ])]
                                                   $ ?sj ?antecedent-nodes)
                                ?afl]
                               [(set ?afl) ?antecedent-formulas]
                               [(datascript.core/q [:find [?s ...] :in $ ?sj ?antecedent-nodes :where
                                                    [?s :matr.node/consequents ?sj]
-                                                   [(get ?antecedent-nodes ?s)]]
+                                                   [(contains? ?antecedent-nodes ?s)]]
                                                   $ ?sj ?antecedent-nodes)
                                ?anl]
                               [(set ?anl) ?antecedent-nodes]])
