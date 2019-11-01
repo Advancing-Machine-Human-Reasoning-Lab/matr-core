@@ -100,7 +100,7 @@
                       :matr.codelet/transaction-since d/tx0}]))
 
 (defn process-config [{:keys [codelets actions]}]
-  (doseq [{:keys [query endpoint stage since]} codelets]
+  (doseq [{:keys [query endpoint stage since] :or {stage 0 since false}} codelets]
     (register-codelet! query endpoint stage since))
   (d/transact! (actions->transaction actions)))
 
