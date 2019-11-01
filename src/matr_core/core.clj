@@ -111,7 +111,7 @@
       (POST "/config" []
         :multipart-params [f :- upload/ByteArrayUpload]
         :middleware [#(upload/wrap-multipart-params % {:store (byte-array-store)})]
-        (spy (yaml/parse-string (slurp (:bytes f)) :keywords true))
+        (process-config (spy (yaml/parse-string (slurp (:bytes f)) :keywords true)))
         (resp/ok "Foo!"))
       (POST "/get/json" []
         (let [c (async/chan)]
