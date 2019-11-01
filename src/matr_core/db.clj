@@ -32,7 +32,9 @@
              :matr.symbol/name {:db/cardinality :db.cardinality/one
                                 :db/type :db.type/string
                                 :db/unique :db.unique/identity}
-             :matr.symbol/type {:db/type :db.type/string}})
+             :matr.symbol/type {:db/type :db.type/string}
+             :matr.tx/codelet-checkpoint {:db/cardinality :db.cardinality/one
+                                          :db/type :db.type/boolean}})
 
 (defn make-initial-db []
   (let [conn (d/create-conn schema)]

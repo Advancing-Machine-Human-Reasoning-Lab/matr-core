@@ -133,8 +133,8 @@
                                  @conn)))
   ([nodes] (step-proofer ["ALL"] nodes))
   ([codelets nodes]
-   (let [db @conn
-         tx (:max-tx db)]
+   (let [{db :db-after {tx :db/current-tx} :tempids}
+         (d/transact! conn [{:db/id :db/current-tx :matr.tx/codelet-checkpoint true}])]
      (doseq [[stage codelets] (->> (d/q db-codelets-query db)
                                    (reduce (fn [m [k v]]
                                              (update m k (fnil conj []) v))
