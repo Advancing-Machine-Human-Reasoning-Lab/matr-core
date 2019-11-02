@@ -102,7 +102,7 @@
 (defn process-config [{:keys [codelets actions]}]
   (doseq [{:keys [query endpoint stage since] :or {stage 0 since false}} codelets]
     (register-codelet! query endpoint stage since))
-  (d/transact! (actions->transaction actions)))
+  (d/transact! conn (actions->transaction actions)))
 
 (def app
   (-> 
