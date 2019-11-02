@@ -24,7 +24,7 @@
              :matr.codelet/endpoint {:db/type :db.type/string
                                      :db/cardinality :db.cardinality/one}
              :matr.codelet/query {:db/cardinality :db.cardinality/one}
-             :matr.codelet/stage {:db/cardinality :db.cardinality/one}
+             :matr.codelet/stage {:db/cardinality :db.cardinality/many}
              :matr.codelet/query-include-since {:db/type :db.type/boolean
                                                 :db/cardinality :db.cardinality/one}
              :matr.codelet/last-query-tx {:db/type :db.type/ref
