@@ -13,10 +13,23 @@
             [taoensso.timbre :as timbre :refer [log spy]]
             [yaml.core :as yaml]
             [matr-core.utils :refer [juxt-map]]
-            [matr-core.db :refer [schema conn db-rootbox-query]]
+            [matr-core.db :as db :refer [schema conn db-rootbox-query]]
             [matr-core.actions :refer [actions->transaction Action]]
             [matr-core.codelets :refer [step-proofer]])
   (:gen-class))
+
+(defn db->simple-frontend-json
+  [db]
+  (d/pull db '[:db/id :matr.box/parent
+               {:matr.box/_parent ... 
+                :matr.box/axioms [:matr.node/formula]
+                :matr.box/goals [:matr.node/formula]
+                :matr.node/_parent [:db/id :matr/kind :matr.justification/inference-name
+                                    :matr.node/formula :matr.node/flags
+                                    :matr.box/_axioms :matr.box/_goals
+                                    {:matr.node/consequents [:db/id :matr/kind :matr.node/formula]
+                                     :matr.node/_consequents [:db/id :matr/kind :matr.node/formula]}]}] 
+          (db-rootbox-query db)))
 
 (defn db->frontend-json
   "Export the database in a format the frontend will understand."
@@ -53,15 +66,7 @@
         ;; into the existing format. As an alternative, the frontend
         ;; could be adapted to take this pull directly. The pull could
         ;; even be simplified some, in that case.
-        pull (d/pull db '[:db/id :matr.box/parent
-                          {:matr.box/_parent ... 
-                           :matr.box/axioms [:matr.node/formula]
-                           :matr.box/goals [:matr.node/formula]
-                           :matr.node/_parent [:matr/kind :matr.justification/inference-name
-                                               :matr.node/formula :matr.node/flags
-                                               {:matr.node/consequents [:db/id :matr/kind :matr.node/formula]
-                                                :matr.node/_consequents [:db/id :matr/kind :matr.node/formula]}]}] 
-                     (db-rootbox-query db))]
+        pull (db->simple-frontend-json db)]
     {"box" (into [] (conv-boxes pull))}))
 
 (defn check-formula
@@ -107,10 +112,20 @@
 (def app
   (-> 
    (api
+    (GET "/proof" []
+      (resp/ok (db->simple-frontend-json @conn)))
+    (POST "/stepProofer" []
+      (let [c (async/chan)]
+        (async/>!! (:cin @server) {:type :step :reply-chan c})
+        (async/<!! c))
+      (resp/ok (db->simple-frontend-json @conn)))
     (context "/MATRCoreREST/rest/test" []
       (POST "/config" []
         :multipart-params [f :- upload/ByteArrayUpload]
+        :query-params [{reset :- schema/Bool false}]
         :middleware [#(upload/wrap-multipart-params % {:store (byte-array-store)})]
+        (when reset
+          (alter-var-root #'conn (constantly (db/make-initial-db))))
         (process-config (spy (yaml/parse-string (slurp (:bytes f)) :keywords true)))
         (resp/ok "Foo!"))
       (POST "/get/json" []
