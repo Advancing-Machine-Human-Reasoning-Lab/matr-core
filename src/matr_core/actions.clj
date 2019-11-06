@@ -21,31 +21,37 @@
         new-axioms (actually-new-axioms db boxid newaxioms)]
     (if (seq new-axioms)
       (if-let [b (run-db-box-from-axioms-query db boxid newaxioms)]
-        {:matr/kind :matr.kind/node
-         :matr.node/parent b
-         :matr.node/formula formula}
-        {:matr/kind :matr.kind/box
-         :matr.node/_parent
-         (into [] (concat (map (fn [f] {:db/id f :matr.node/formula f
-                                        :matr.node/flags ["checked"]
-                                        :matr/kind :matr.kind/node})
-                               new-axioms)
-                          [{:matr/kind :matr.kind/node
-                            :db/id formula :matr.node/formula formula}]))
-         :matr.box/axioms (into [] new-axioms)
-         :matr.box/parent boxid})
-      (or (anteceedent-nodes-map formula)
-          {:matr/kind :matr.kind/node
-           :matr.node/formula formula
-           :matr.node/parent boxid}))))
+        [{:matr/kind :matr.kind/node
+          :matr.node/parent b
+          :matr.node/formula formula}]
+        [{:db/id formula
+          :matr/kind :matr.kind/node
+          :matr.node/formula formula}
+         {:matr/kind :matr.kind/box
+          :matr.node/_parent
+          (into [] (concat (map (fn [f] {:db/id f :matr.node/formula f
+                                         :matr.node/flags ["checked"]
+                                         :matr/kind :matr.kind/node})
+                                new-axioms)
+                           [formula]))
+          :matr.box/axioms (into [] new-axioms)
+          :matr.box/goals [formula]
+          :matr.box/parent boxid}])
+      [(or (anteceedent-nodes-map formula)
+           {:matr/kind :matr.kind/node
+            :matr.node/formula formula
+            :matr.node/parent boxid})])))
 
 (defn process-justification-anteceedents [db boxid anteceedents]
   (let [anteceedent-nodes-map (->> anteceedents
                                    (map #(get % :formula))
                                    (into [])
                                    (db-nodes-query db boxid))]
-    (for [anteceedent anteceedents]
-      (process-justification-anteceedent db boxid anteceedent anteceedent-nodes-map))))
+    (let [antecedents
+          (for [anteceedent anteceedents]
+            (process-justification-anteceedent db boxid anteceedent
+                                               anteceedent-nodes-map))]
+      [(map first antecedents) (->> (map rest antecedents) (apply concat))])))
 
 (defn all-newsyms [db newsyms antecedents]
   (letfn [(newsym-name [sym]
@@ -109,14 +115,15 @@
                              :matr.node/formula consequence
                              :matr.node/parent boxid})
             newsyms (all-newsyms db newsyms antecedents)
-            antecedents (process-justification-anteceedents db boxid complex-antecedents)]
-        (conj newsyms
-              {:db/id local-id
-               :matr/kind :matr.kind/justification
-               :matr.justification/inference-name name
-               :matr.node/consequents consequence
-               :matr.node/_consequents (concat antecedent-ids antecedents)
-               :matr.node/parent boxid})))))
+            [antecedents additional-stuff] (process-justification-anteceedents db boxid complex-antecedents)]
+        (concat newsyms
+                [{:db/id local-id
+                  :matr/kind :matr.kind/justification
+                  :matr.justification/inference-name name
+                  :matr.node/consequents consequence
+                  :matr.node/_consequents (concat antecedent-ids antecedents)
+                  :matr.node/parent boxid}]
+                additional-stuff)))))
 
 (defmethod action->datoms "add_box" [db action]
   nil)
