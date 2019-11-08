@@ -128,6 +128,20 @@
 (defmethod action->datoms "add_box" [db action]
   nil)
 
+(schema/defschema AddNodeAction
+  {:action (schema/eq "addNode")
+   :formula schema/Str
+   :box schema/Int})
+
+(defmethod action->datoms "addNode" [db action]
+  (when-not (d/q '[:find ?e . :in $ ?f ?b
+                   :where [?e :matr.node/formula ?f] [?e :matr.node/parent ?b]]
+                 db (:formula action) (:box action))
+    {:matr/kind :matr.kind/node
+     :db/id (:formula action)
+     :matr.node/formula (:formula get action)
+     :matr.node/parent (:box get action)}))
+
 (schema/defschema AddAxiomAction
   {:action (schema/eq "addAxiom")
    :formula schema/Str})
@@ -232,6 +246,7 @@
   (schema/conditional
    (comp #(= "add_justification" %) :action) JustificationAction
    (comp #(= "addAxiom" %) :action) AddAxiomAction
+   (comp #(= "addNode" %) :action) AddNodeAction
    (comp #(= "addGoal" %) :action) AddGoalAction
    (comp #{"flag" "unflag"} :action) FlagAction
    (comp #{"flagEntity" "unflagEntity"} :action) FlagEntityAction
