@@ -139,8 +139,8 @@
                  db (:formula action) (:box action))
     {:matr/kind :matr.kind/node
      :db/id (:formula action)
-     :matr.node/formula (:formula get action)
-     :matr.node/parent (:box get action)}))
+     :matr.node/formula (:formula action)
+     :matr.node/parent (:box action)}))
 
 (schema/defschema AddAxiomAction
   {:action (schema/eq "addAxiom")
