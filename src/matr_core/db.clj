@@ -7,6 +7,8 @@
                               :db/cardinality :db.cardinality/many}
              :matr.box/parent {:db/type :db.type/ref
                                :db/cardinality :db.cardinality/one}
+             :matr.box/logic {:db/type :db.type/string
+                              :db/cardinality :db.cardinality/one}
              :matr.node/parent {:db/type :db.type/ref
                                 :db/cardinality :db.cardinality/one}
              :matr.node/consequents {:db/type :db.type/ref
@@ -17,10 +19,9 @@
                                :db/cardinality :db.cardinality/many}
              :matr.justification/inference-name {:db/type :db.type/string
                                                  :db/cardinality :db.cardinality/one}
-             :matr.justification/reiterated-from {:db/type :db.type/ref
-                                                  :db/cardinality :db.cardinality/many}
              :matr/kind {:db/type :db.type/keyword
                          :db/cardinality :db.cardinality/one}
+             :matr.justification/logic {:db/cardinality :db.cardinality/one}
              :matr.codelet/endpoint {:db/type :db.type/string
                                      :db/cardinality :db.cardinality/one}
              :matr.codelet/query {:db/cardinality :db.cardinality/one}
@@ -36,10 +37,15 @@
              :matr.tx/codelet-checkpoint {:db/cardinality :db.cardinality/one
                                           :db/type :db.type/boolean}})
 
-(defn make-initial-db []
-  (let [conn (d/create-conn schema)]
-    (d/transact! conn [{:matr/kind :matr.kind/box}])
-    conn))
+(defn make-initial-db
+  ([]
+   (let [conn (d/create-conn schema)]
+     (d/transact! conn [{:matr/kind :matr.kind/box}])
+     conn))
+  ([logic]
+   (let [conn (d/create-conn schema)]
+     (d/transact! conn [{:matr/kind :matr.kind/box :matr.box/logic logic}])
+     conn)))
 
 (def conn (make-initial-db))
 
@@ -61,19 +67,20 @@
             db boxid formulas)
        (into {})))
 
-(def db-box-from-axioms-query `[:find ?box . :in $ ?pbox ?ifs :where
-                                [?box :matr.box/parent ?pbox]
-                                [(d/q [:find [?f ...] :in $ ?box
-                                       :where [?box :matr.box/axioms ?ax] [?ax :matr.node/formula ?f]]
-                                      $ ?box)
-                                 ?fl]
-                                [(set ?fl) ?fs]
-                                [(= ?fs ?ifs)]])
+(def db-box-query `[:find ?box . :in $ ?pbox ?logic ?ifs :where
+                    [?box :matr.box/parent ?pbox]
+                    [?box :matr.box/logic ?logic]
+                    [(d/q [:find [?f ...] :in $ ?box
+                           :where [?box :matr.box/axioms ?ax] [?ax :matr.node/formula ?f]]
+                          $ ?box)
+                     ?fl]
+                    [(set ?fl) ?fs]
+                    [(= ?fs ?ifs)]])
 
-(defn run-db-box-from-axioms-query
-  "Find sub-boxes of a given box with the given axiom set."
-  [db boxid axioms]
-  (d/q db-box-from-axioms-query db boxid (set axioms)))
+(defn run-db-box-query
+  "Find sub-box of a given box with the given logic and axiom set."
+  [db boxid logic axioms]
+  (d/q db-box-from-axioms-query db boxid logic (set axioms)))
 
 (def db-all-axioms-pull '[{:matr.box/axioms [:matr.node/formula] :matr.box/parent ...}])
 
@@ -87,11 +94,13 @@
       axioms-pull->axioms
       set))
 
-(def db-justification-query '[:find ?sj . :in $ ?box ?inference ?antecedent-nodes ?antecedent-formulas ?consequent-formula :where
+(def db-justification-query '[:find ?sj .
+                              :in $ ?box ?inference ?logic ?antecedent-nodes ?antecedent-formulas ?consequent-formula :where
                               [?c :matr.node/formula ?consequent-formula]
                               [?c :matr.node/parent ?box]
                               [?sj :matr.node/parent ?box]
                               [?sj :matr/kind :matr.kind/justification]
+                              [?js :matr.justification/logic logic]
                               [?sj :matr.node/consequents ?c]
                               [?sj :matr.justification/inference-name ?inference]
                               [(datascript.core/q [:find [?saf ...] :in $ ?sj ?antecedent-nodes :where

@@ -16,14 +16,16 @@
   (let [new-axioms (set new-axioms)]
     (clojure.set/difference new-axioms (pull-all-axioms db boxid))))
 
-(defn process-justification-anteceedent [db boxid anteceedent anteceedent-nodes-map]
+(defn process-justification-anteceedent [db boxid box-logic logic anteceedent anteceedent-nodes-map]
   (let [{:keys [newsyms newaxioms formula]} anteceedent
         new-axioms (actually-new-axioms db boxid newaxioms)]
-    (if (seq new-axioms)
-      (if-let [b (run-db-box-from-axioms-query db boxid newaxioms)]
-        [{:matr/kind :matr.kind/node
+    (if (or (not= logic box-logic) (seq new-axioms))
+      (if-let [b (run-db-box-from-axioms-query db boxid logic newaxioms)]
+        [{:db/id formula
+          :matr/kind :matr.kind/node
           :matr.node/parent b
-          :matr.node/formula formula}]
+          :matr.node/formula formula}
+         [:db/add b :matr.box/goals formula]]
         [{:db/id formula
           :matr/kind :matr.kind/node
           :matr.node/formula formula}
@@ -36,21 +38,22 @@
                            [formula]))
           :matr.box/axioms (into [] new-axioms)
           :matr.box/goals [formula]
+          :matr.box/logic logic
           :matr.box/parent boxid}])
       [(or (anteceedent-nodes-map formula)
            {:matr/kind :matr.kind/node
             :matr.node/formula formula
             :matr.node/parent boxid})])))
 
-(defn process-justification-anteceedents [db boxid anteceedents]
+(defn process-justification-anteceedents [db boxid box-logic logic anteceedents]
   (let [anteceedent-nodes-map (->> anteceedents
                                    (map #(get % :formula))
                                    (into [])
                                    (db-nodes-query db boxid))]
     (let [antecedents
           (for [anteceedent anteceedents]
-            (process-justification-anteceedent db boxid anteceedent
-                                               anteceedent-nodes-map))]
+            (process-justification-anteceedent db boxid box-logic logic
+                                               anteceedent anteceedent-nodes-map))]
       [(map first antecedents) (->> (map rest antecedents) (apply concat))])))
 
 (defn all-newsyms [db newsyms antecedents]
@@ -93,12 +96,14 @@
                                    :newaxioms [schema/Str]})]
    :consequence schema/Str
    :name schema/Str
+   :logic schema/Str
    (schema/optional-key :local-id) schema/Any
    (schema/optional-key :newsyms) [NewSym]})
 
 (defmethod action->datoms "add_justification"
-  [db {boxid :box, :keys [antecedents consequence name local-id newsyms]}]
-  (let [consequentIdMap (db-nodes-query db boxid [consequence])
+  [db {boxid :box, :keys [antecedents consequence name logic local-id newsyms]}]
+  (let [{box-logic :matr.box/logic} (d/entity db boxid)
+        consequentIdMap (db-nodes-query db boxid [consequence])
         complex-antecedents (remove number? antecedents)
         antecedent-formula (->> complex-antecedents
                                 (map :formula)
@@ -106,20 +111,20 @@
         antecedent-ids (->> antecedents
                             (filter number?)
                             (into #{}))
-        justification (d/q db-justification-query db boxid name antecedent-ids antecedent-formula consequence)]
+        justification (d/q db-justification-query db boxid name logic antecedent-ids antecedent-formula consequence)]
     (when-not justification
-      (let [anteceedentIdMap (db-nodes-query db boxid complex-antecedents)
-            consequence (or (consequentIdMap consequence)
+      (let [consequence (or (consequentIdMap consequence)
                             {:matr/kind :matr.kind/node
                              :db/id consequence
                              :matr.node/formula consequence
                              :matr.node/parent boxid})
             newsyms (all-newsyms db newsyms antecedents)
-            [antecedents additional-stuff] (process-justification-anteceedents db boxid complex-antecedents)]
+            [antecedents additional-stuff] (process-justification-anteceedents db boxid box-logic logic complex-antecedents)]
         (concat newsyms
                 [{:db/id local-id
                   :matr/kind :matr.kind/justification
                   :matr.justification/inference-name name
+                  :matr.justification/logic logic
                   :matr.node/consequents consequence
                   :matr.node/_consequents (concat antecedent-ids antecedents)
                   :matr.node/parent boxid}]

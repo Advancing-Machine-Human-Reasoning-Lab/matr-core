@@ -104,7 +104,8 @@
                       :matr.codelet/query-include-since since
                       :matr.codelet/transaction-since d/tx0}]))
 
-(defn process-config [{:keys [codelets actions]}]
+(defn process-config [{:keys [root_logic codelets actions]}]
+  (alter-var-root #'conn (constantly (db/make-initial-db root_logic)))
   (doseq [{:keys [query endpoint stage since] :or {stage 0 since false}} codelets]
     (register-codelet! query endpoint stage since))
   (d/transact! conn (actions->transaction actions)))
@@ -122,24 +123,11 @@
     (context "/MATRCoreREST/rest/test" []
       (POST "/config" []
         :multipart-params [f :- upload/ByteArrayUpload]
-        :query-params [{reset :- schema/Bool false}]
         :middleware [#(upload/wrap-multipart-params % {:store (byte-array-store)})]
-        (when reset
-          (alter-var-root #'conn (constantly (db/make-initial-db))))
         (process-config (spy (yaml/parse-string (slurp (:bytes f)) :keywords true)))
         (resp/ok "Foo!"))
-      (POST "/get/json" []
-        (let [c (async/chan)]
-          (async/>!! (:cin @server) {:type :step :reply-chan c})
-          (async/<!! c))
-        (resp/ok (db->frontend-json @conn)))
-      (POST "/stepProofer" []
-        (let [c (async/chan)]
-          (async/>!! (:cin @server) {:type :step :reply-chan c})
-          (async/<!! c))
-        (resp/ok (db->frontend-json @conn)))
       (POST "/get/checkFormula" req
-        (resp/ok (str (check-formula (slurp (:body req))))))
+        (resp/ok (str (check-formula (spy (slurp (:body req)))))))
       (POST "/submitActions" []
         :body [{:keys [actions actionName]} ActionRequest]
         (clojure.pprint/pprint actions)
