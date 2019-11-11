@@ -3,7 +3,7 @@
    [datascript.core :as d]
    [schema.core :as schema]
    [taoensso.timbre :as timbre :refer [log spy]]
-   [matr-core.db :refer [db-rootbox-query db-nodes-query run-db-box-from-axioms-query
+   [matr-core.db :refer [db-rootbox-query db-nodes-query run-db-box-query
                          db-justification-query pull-all-axioms]]))
 
 (defmulti action->datoms
@@ -20,7 +20,7 @@
   (let [{:keys [newsyms newaxioms formula]} anteceedent
         new-axioms (actually-new-axioms db boxid newaxioms)]
     (if (or (not= logic box-logic) (seq new-axioms))
-      (if-let [b (run-db-box-from-axioms-query db boxid logic newaxioms)]
+      (if-let [b (run-db-box-query db boxid logic newaxioms)]
         [{:db/id formula
           :matr/kind :matr.kind/node
           :matr.node/parent b

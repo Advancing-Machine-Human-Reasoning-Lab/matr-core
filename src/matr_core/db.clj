@@ -80,7 +80,7 @@
 (defn run-db-box-query
   "Find sub-box of a given box with the given logic and axiom set."
   [db boxid logic axioms]
-  (d/q db-box-from-axioms-query db boxid logic (set axioms)))
+  (d/q db-box-query db boxid logic (set axioms)))
 
 (def db-all-axioms-pull '[{:matr.box/axioms [:matr.node/formula] :matr.box/parent ...}])
 
