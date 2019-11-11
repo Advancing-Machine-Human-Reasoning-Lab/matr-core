@@ -16,10 +16,10 @@
   (let [new-axioms (set new-axioms)]
     (clojure.set/difference new-axioms (pull-all-axioms db boxid))))
 
-(defn process-justification-anteceedent [db boxid box-logic logic anteceedent anteceedent-nodes-map]
+(defn process-justification-anteceedent [db boxid logic anteceedent anteceedent-nodes-map]
   (let [{:keys [newsyms newaxioms formula]} anteceedent
         new-axioms (actually-new-axioms db boxid newaxioms)]
-    (if (or (not= logic box-logic) (seq new-axioms))
+    (if (seq new-axioms)
       (if-let [b (run-db-box-query db boxid logic newaxioms)]
         [{:db/id formula
           :matr/kind :matr.kind/node
@@ -45,15 +45,14 @@
             :matr.node/formula formula
             :matr.node/parent boxid})])))
 
-(defn process-justification-anteceedents [db boxid box-logic logic anteceedents]
+(defn process-justification-anteceedents [db boxid logic anteceedents]
   (let [anteceedent-nodes-map (->> anteceedents
                                    (map #(get % :formula))
                                    (into [])
                                    (db-nodes-query db boxid))]
     (let [antecedents
           (for [anteceedent anteceedents]
-            (process-justification-anteceedent db boxid box-logic logic
-                                               anteceedent anteceedent-nodes-map))]
+            (process-justification-anteceedent db boxid logic anteceedent anteceedent-nodes-map))]
       [(map first antecedents) (->> (map rest antecedents) (apply concat))])))
 
 (defn all-newsyms [db newsyms antecedents]
@@ -102,8 +101,7 @@
 
 (defmethod action->datoms "add_justification"
   [db {boxid :box, :keys [antecedents consequence name logic local-id newsyms]}]
-  (let [{box-logic :matr.box/logic} (d/entity db boxid)
-        consequentIdMap (db-nodes-query db boxid [consequence])
+  (let [consequentIdMap (db-nodes-query db boxid [consequence])
         complex-antecedents (remove number? antecedents)
         antecedent-formula (->> complex-antecedents
                                 (map :formula)
@@ -119,7 +117,7 @@
                              :matr.node/formula consequence
                              :matr.node/parent boxid})
             newsyms (all-newsyms db newsyms antecedents)
-            [antecedents additional-stuff] (process-justification-anteceedents db boxid box-logic logic complex-antecedents)]
+            [antecedents additional-stuff] (process-justification-anteceedents db boxid logic complex-antecedents)]
         (concat newsyms
                 [{:db/id local-id
                   :matr/kind :matr.kind/justification
