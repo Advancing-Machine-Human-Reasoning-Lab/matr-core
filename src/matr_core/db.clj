@@ -100,7 +100,7 @@
                               [?c :matr.node/parent ?box]
                               [?sj :matr.node/parent ?box]
                               [?sj :matr/kind :matr.kind/justification]
-                              [?js :matr.justification/logic logic]
+                              [?js :matr.justification/logic ?logic]
                               [?sj :matr.node/consequents ?c]
                               [?sj :matr.justification/inference-name ?inference]
                               [(datascript.core/q [:find [?saf ...] :in $ ?sj ?antecedent-nodes :where
