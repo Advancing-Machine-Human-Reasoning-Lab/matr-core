@@ -12,63 +12,26 @@
             [datascript.core :as d]
             [taoensso.timbre :as timbre :refer [log spy]]
             [yaml.core :as yaml]
-            [matr-core.utils :refer [juxt-map]]
-            [matr-core.db :as db :refer [schema conn db-rootbox-query]]
+            [matr-core.utils :refer [juxt-map db-restricted]]
+            [matr-core.db :as db :refer [schema conn db-rootbox-query extract-proof-eids]]
             [matr-core.actions :refer [actions->transaction Action]]
             [matr-core.codelets :refer [step-proofer]])
   (:gen-class))
 
 (defn db->simple-frontend-json
-  [db]
-  (d/pull db '[:db/id :matr.box/parent
-               {(:limit :matr.box/_parent nil) ...
-                (:limit :matr.box/axioms nil) [:matr.node/formula]
-                (:limit :matr.box/goals nil) [:matr.node/formula]
-                (:limit :matr.node/_parent nil)
-                [:db/id :matr/kind :matr.justification/inference-name
-                 :matr.node/formula (:limit :matr.node/flags nil)
-                 :matr.box/_axioms :matr.box/_goals
-                 {:matr.node/consequents [:db/id :matr/kind :matr.node/formula]
-                  :matr.node/_consequents [:db/id :matr/kind :matr.node/formula]}]}]
-          (db-rootbox-query db)))
-
-(defn db->frontend-json
-  "Export the database in a format the frontend will understand."
-  [db]
-  (let [conv-links (fn [links kind selector]
-                     (fn [justification]
-                       (->> justification links (filter #(= kind (:matr/kind %))) (map selector) (into []))))
-        check-explored-flag (fn [n] (some #(= % "explored") (:matr.node/flags n)))
-        check-checked-flag (fn [n] (some #(= % "checked") (:matr.node/flags n)))
-        conv-node (juxt-map {"content" :matr.node/formula,"explored" check-explored-flag "checked" check-checked-flag})
-        conv-justification (juxt-map {"content" :matr.justification/inference-name,
-                                      "nextNodes" (conv-links :matr.node/consequents :matr.kind/node :matr.node/formula),
-                                      "nextBoxes" (conv-links :matr.node/consequents :matr.kind/box :db/id),
-                                      "previousNodes" (conv-links :matr.node/_consequents :matr.kind/node :matr.node/formula),
-                                      "prevBoxes" (conv-links :matr.node/_consequents :matr.kind/box :db/id)})
-        conv-box (juxt-map {"boxID" :db/id
-                            "superBoxID" (comp :db/id :matr.box/parent)
-                            "nodes" (fn [b] (->> b :matr.node/_parent
-                                                 (filter #(= :matr.kind/node (:matr/kind %)))
-                                                 (map conv-node)
-                                                 (into [])))
-                            "justificationNodes" (fn [b] (->> b :matr.node/_parent
-                                                              (filter #(= :matr.kind/justification (:matr/kind %)))
-                                                              (map conv-justification)
-                                                              (into [])))
-                            "axioms" (fn [b] (->> b :matr.box/axioms
-                                                  (map #(as-> % f (:matr.node/formula f) {"content" f "checked" true}))
-                                                  (into [])))
-                            "goals" (fn [b] (->> b :matr.box/goals
-                                                 (map #(as-> % f (:matr.node/formula f) {"content" f}))
-                                                 (into [])))})
-        conv-boxes (fn conv-boxes [b] (cons (conv-box b) (->> b :matr.box/_parent (map conv-boxes) flatten)))
-        ;; Everything but this pull is just for converting the pull
-        ;; into the existing format. As an alternative, the frontend
-        ;; could be adapted to take this pull directly. The pull could
-        ;; even be simplified some, in that case.
-        pull (db->simple-frontend-json db)]
-    {"box" (into [] (conv-boxes pull))}))
+  [db minimal]
+  (let [db (if minimal (db-restricted db (extract-proof-eids db)) db)]
+    (d/pull db '[:db/id :matr.box/parent
+                 {(:limit :matr.box/_parent nil) ...
+                  (:limit :matr.box/axioms nil) [:matr.node/formula]
+                  (:limit :matr.box/goals nil) [:matr.node/formula]
+                  (:limit :matr.node/_parent nil)
+                  [:db/id :matr/kind :matr.justification/inference-name
+                   :matr.node/formula (:limit :matr.node/flags nil)
+                   :matr.box/_axioms :matr.box/_goals
+                   {:matr.node/consequents [:db/id :matr/kind :matr.node/formula]
+                    :matr.node/_consequents [:db/id :matr/kind :matr.node/formula]}]}]
+            (db-rootbox-query db))))
 
 (defn check-formula
   "Attempt to parse the formula as edn."
@@ -115,12 +78,14 @@
   (-> 
    (api
     (GET "/proof" []
-      (resp/ok (db->simple-frontend-json @conn)))
+      :query-params [minimalResponse :- schema/Bool]
+      (resp/ok (db->simple-frontend-json @conn minimalResponse)))
     (POST "/stepProofer" []
+      :query-params [minimalResponse :- schema/Bool]
       (let [c (async/chan)]
         (async/>!! (:cin @server) {:type :step :reply-chan c})
         (async/<!! c))
-      (resp/ok (db->simple-frontend-json @conn)))
+      (resp/ok (db->simple-frontend-json @conn minimalResponse)))
     (context "/MATRCoreREST/rest/test" []
       (POST "/config" []
         :multipart-params [f :- upload/ByteArrayUpload]

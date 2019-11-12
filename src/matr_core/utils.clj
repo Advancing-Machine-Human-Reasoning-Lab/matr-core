@@ -15,3 +15,7 @@
   "Filter a db to just the datoms after a particular transaction."
   [db tx]
   (d/filter db (fn [db datom] (< tx (:tx datom)))))
+(defn db-restricted
+  "Filter a db to just the datoms involving a given set of entities"
+  [db entities]
+  (d/filter db (fn [db datom] (contains? entities (:e datom)))))
