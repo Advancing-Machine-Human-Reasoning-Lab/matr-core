@@ -87,14 +87,27 @@
 
 ;;;; Side-effecting stuff
 
+(def errors (atom []))
+(def error-queries
+  '[[:find ?p ?q ?f ?b :where
+     [?p :matr.node/formula ?f]
+     [?q :matr.node/formula ?f]
+     [(not= ?p ?q)]
+     [?p :matr.node/parent ?b]
+     [?q :matr.node/parent ?b]]])
+
 (defn handle-codelet-response
   "Convert and run the actions returned by the codelet server."
   [codelet iteration-tx]
   (fn [resp]
     (try
       (doseq [transaction (codelet-response->transactions resp)]
-        (d/transact! conn (concat (spy :debug transaction)
-                                  [[:db/add (:db/id codelet) :matr.codelet/transaction-since iteration-tx]])))
+        (let [tx
+              (d/transact! conn (concat (spy :debug transaction)
+                                        [[:db/add (:db/id codelet) :matr.codelet/transaction-since iteration-tx]]))]
+          (doseq [q error-queries]
+            (when (and (not (seq (d/q q (:db-before tx)))) (seq (d/q q (:db-after tx))))
+              (swap! errors conj [q transaction tx])))))
       (catch Exception e
         (log :debug e)))))
 
