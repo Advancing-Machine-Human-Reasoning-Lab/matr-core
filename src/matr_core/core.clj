@@ -21,14 +21,15 @@
 (defn db->simple-frontend-json
   [db]
   (d/pull db '[:db/id :matr.box/parent
-               {:matr.box/_parent ... 
-                :matr.box/axioms [:matr.node/formula]
-                :matr.box/goals [:matr.node/formula]
-                :matr.node/_parent [:db/id :matr/kind :matr.justification/inference-name
-                                    :matr.node/formula :matr.node/flags
-                                    :matr.box/_axioms :matr.box/_goals
-                                    {:matr.node/consequents [:db/id :matr/kind :matr.node/formula]
-                                     :matr.node/_consequents [:db/id :matr/kind :matr.node/formula]}]}] 
+               {(:limit :matr.box/_parent nil) ...
+                (:limit :matr.box/axioms nil) [:matr.node/formula]
+                (:limit :matr.box/goals nil) [:matr.node/formula]
+                (:limit :matr.node/_parent nil)
+                [:db/id :matr/kind :matr.justification/inference-name
+                 :matr.node/formula (:limit :matr.node/flags nil)
+                 :matr.box/_axioms :matr.box/_goals
+                 {:matr.node/consequents [:db/id :matr/kind :matr.node/formula]
+                  :matr.node/_consequents [:db/id :matr/kind :matr.node/formula]}]}]
           (db-rootbox-query db)))
 
 (defn db->frontend-json
