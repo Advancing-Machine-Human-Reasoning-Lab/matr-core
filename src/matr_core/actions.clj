@@ -140,10 +140,10 @@
   (when-not (d/q '[:find ?e . :in $ ?f ?b
                    :where [?e :matr.node/formula ?f] [?e :matr.node/parent ?b]]
                  db (:formula action) (:box action))
-    {:matr/kind :matr.kind/node
-     :db/id (:formula action)
-     :matr.node/formula (:formula action)
-     :matr.node/parent (:box action)}))
+    [{:matr/kind :matr.kind/node
+      :db/id (:formula action)
+      :matr.node/formula (:formula action)
+      :matr.node/parent (:box action)}]))
 
 (schema/defschema AddAxiomAction
   {:action (schema/eq "addAxiom")
