@@ -160,7 +160,7 @@
                                    db
                                    (db-since db (:matr.codelet/transaction-since codelet)))
                               (d/q (edn/read-string (:matr.codelet/query codelet)) db))]
-                    (when (or (not (seqable? res)) (seq res))
+                    (when (if (seqable? res) (seq res) res)
                       (ajax/POST (:matr.codelet/endpoint codelet)
                                  {:format :json
                                   :response-format :json
