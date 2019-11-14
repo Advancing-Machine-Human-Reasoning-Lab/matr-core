@@ -155,17 +155,18 @@
        (let [db @conn] ; Each stage needs to be able to see the changes since the previous stage
          (->> (for [codelet codelets]
                 (do
-                  (when-let [q (seq (if (:matr.codelet/query-include-since codelet)
-                                      (d/q (edn/read-string (:matr.codelet/query codelet))
-                                           db
-                                           (db-since db (:matr.codelet/transaction-since codelet)))
-                                      (d/q (edn/read-string (:matr.codelet/query codelet)) db)))]
-                    (ajax/POST (:matr.codelet/endpoint codelet)
-                               {:format :json
-                                :response-format :json
-                                :keywords? true
-                                :params (into [] q)
-                                :handler (handle-codelet-response codelet tx)}))))
+                  (let [res (if (:matr.codelet/query-include-since codelet)
+                              (d/q (edn/read-string (:matr.codelet/query codelet))
+                                   db
+                                   (db-since db (:matr.codelet/transaction-since codelet)))
+                              (d/q (edn/read-string (:matr.codelet/query codelet)) db))]
+                    (when (or (not (seqable? res)) (seq res))
+                      (ajax/POST (:matr.codelet/endpoint codelet)
+                                 {:format :json
+                                  :response-format :json
+                                  :keywords? true
+                                  :params res
+                                  :handler (handle-codelet-response codelet tx)})))))
               (filter identity)
               doall
               (map deref)
