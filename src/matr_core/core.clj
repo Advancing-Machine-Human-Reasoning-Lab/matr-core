@@ -13,7 +13,7 @@
             [taoensso.timbre :as timbre :refer [log spy]]
             [yaml.core :as yaml]
             [matr-core.utils :refer [juxt-map db-restricted]]
-            [matr-core.db :as db :refer [schema conn db-rootbox-query extract-proof-eids]]
+            [matr-core.db :as db :refer [schema conn db-rootbox-query extract-proof-eids transact!]]
             [matr-core.actions :refer [actions->transaction Action]]
             [matr-core.codelets :refer [step-proofer]])
   (:gen-class))
@@ -61,18 +61,18 @@
    :extra-args [schema/Any]})
 
 (defn register-codelet! [query endpoint stage since]
-  (d/transact! conn [{:matr/kind :matr.kind/codelet
-                      :matr.codelet/endpoint endpoint
-                      :matr.codelet/query query
-                      :matr.codelet/stage stage
-                      :matr.codelet/query-include-since since
-                      :matr.codelet/transaction-since d/tx0}]))
+  (transact! conn [{:matr/kind :matr.kind/codelet
+                    :matr.codelet/endpoint endpoint
+                    :matr.codelet/query query
+                    :matr.codelet/stage stage
+                    :matr.codelet/query-include-since since
+                    :matr.codelet/transaction-since d/tx0}]))
 
 (defn process-config [{:keys [root_logic codelets actions]}]
   (alter-var-root #'conn (constantly (db/make-initial-db root_logic)))
   (doseq [{:keys [query endpoint stage since] :or {stage 0 since false}} codelets]
     (register-codelet! query endpoint stage since))
-  (d/transact! conn (actions->transaction actions)))
+  (transact! conn (actions->transaction actions)))
 
 (def app
   (-> 
@@ -97,7 +97,7 @@
       (POST "/submitActions" []
         :body [{:keys [actions actionName]} ActionRequest]
         (clojure.pprint/pprint actions)
-        (d/transact! conn (actions->transaction actionName actions))
+        (transact! conn (actions->transaction actionName actions))
         (resp/ok))
       (GET "/query" []
         :body [{query :query, args :extra-args} QueryRequest]
@@ -155,10 +155,10 @@
 
 (defn make-example-db []
   (let [db (d/create-conn schema)]
-    (d/transact! db [{:matr/kind :matr.kind/box}
-                     [:db.fn/call #'matr-core.actions/actions->datoms
-                      [{"action" "addAxiom"
-                        "formula" "(IFF y (NBF (QB y)))"}
-                       {"action" "addGoal"
-                        "formula" "(AND y (NBF (QB y)))"}]]])
+    (transact! db [{:matr/kind :matr.kind/box}
+                   [:db.fn/call #'matr-core.actions/actions->datoms
+                    [{"action" "addAxiom"
+                      "formula" "(IFF y (NBF (QB y)))"}
+                     {"action" "addGoal"
+                      "formula" "(AND y (NBF (QB y)))"}]]])
     db))

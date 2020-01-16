@@ -6,7 +6,7 @@
    [schema.core :as schema]
    [taoensso.timbre :as timbre :refer [log spy]]
    [matr-core.utils :refer [juxt-map db-since]]
-   [matr-core.db :refer [schema conn db-codelets-query db-justification-query]]
+   [matr-core.db :refer [schema conn db-codelets-query db-justification-query transact!]]
    [matr-core.actions :refer [actions->transaction Action]]))
 
 ;;;; Pure functions over db
@@ -103,8 +103,8 @@
     (try
       (doseq [transaction (codelet-response->transactions resp)]
         (let [tx
-              (d/transact! conn (concat (spy :debug transaction)
-                                        [[:db/add (:db/id codelet) :matr.codelet/transaction-since iteration-tx]]))]
+              (transact! conn (concat (spy :debug transaction)
+                                      [[:db/add (:db/id codelet) :matr.codelet/transaction-since iteration-tx]]))]
           (doseq [q error-queries]
             (when (and (not (seq (d/q q (:db-before tx)))) (seq (d/q q (:db-after tx))))
               (swap! errors conj [q transaction tx])))))
@@ -114,7 +114,7 @@
 (defn reiterate-justifications
   "Reiterate any justifications from parent boxes applicable to the given nodes."
   [nodes]
-  (d/transact! conn (find-justifications-to-reiterate @conn nodes)))
+  (transact! conn (find-justifications-to-reiterate @conn nodes)))
 
 (defn find-unchecked-nodes 
   [uncheckedNodes]
@@ -135,7 +135,7 @@
                                               [?n :matr/kind :matr.kind/node] 
                                               [?n :matr.node/flags "checked"]] 
                                             @conn)) x))
-              (d/transact! conn [[:db/add x :matr.node/flags "checked"]]))))))))
+              (transact! conn [[:db/add x :matr.node/flags "checked"]]))))))))
 
 (defn step-proofer
   "Explore unexplored nodes by sending them to the codelets server and
@@ -147,11 +147,11 @@
   ([nodes] (step-proofer ["ALL"] nodes))
   ([codelets nodes]
    (let [{db :db-after {tx :db/current-tx} :tempids}
-         (d/transact! conn [{:db/id :db/current-tx :matr.tx/codelet-checkpoint true}])]
      (doseq [[stage codelets] (->> (d/q db-codelets-query db)
                                    (reduce (fn [m [k v]]
                                              (update m k (fnil conj []) v))
                                            (sorted-map)))]
+         (transact! conn [{:db/id :db/current-tx :matr.tx/codelet-checkpoint true}])]
        (let [db @conn] ; Each stage needs to be able to see the changes since the previous stage
          (->> (for [codelet codelets]
                 (do

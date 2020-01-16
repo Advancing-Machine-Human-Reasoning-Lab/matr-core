@@ -1,5 +1,6 @@
 (ns matr-core.db
-  (:require [datascript.core :as d]))
+  (:require [datascript.core :as d]
+            [taoensso.timbre :as timbre :refer [log spy debugf]]))
 
 (def schema {:matr.box/axioms {:db/type :db.type/ref
                                :db/cardinality :db.cardinality/many}
@@ -39,15 +40,34 @@
 
 (defn make-initial-db
   ([]
-   (let [conn (d/create-conn schema)]
-     (d/transact! conn [{:matr/kind :matr.kind/box}])
-     conn))
+   (-> schema
+       d/empty-db
+       (d/db-with [{:matr/kind :matr.kind/box}])
+       (agent :error-function (fn [a e] (log :debug e)))))
   ([logic]
-   (let [conn (d/create-conn schema)]
-     (d/transact! conn [{:matr/kind :matr.kind/box :matr.box/logic logic}])
-     conn)))
+   (-> schema
+       d/empty-db
+       (d/db-with [{:matr/kind :matr.kind/box :matr.box/logic logic}])
+       (agent :error-function (fn [a e] (log :debug e))))))
 
-(def conn (make-initial-db))
+(def conn (make-initial-db "ML"))
+
+(defn transact! [conn datoms]
+  (let [res (atom nil)]
+    (letfn [(txer [db datoms]
+              (try
+                (let [tx (d/with db datoms)]
+                  (reset! res [:good tx])
+                  (:db-after tx))
+                (catch Exception e
+                  (reset! res [:bad e]))))]
+      (send conn txer datoms)
+      (await conn)
+      (if-let [[quality value] @res]
+        (case quality
+          :good value
+          :bad (throw value))
+        (throw (Exception. "Lost a transaction response..."))))))
 
 (def db-rootbox-query
   "Find the entity id of the box without any parent."
