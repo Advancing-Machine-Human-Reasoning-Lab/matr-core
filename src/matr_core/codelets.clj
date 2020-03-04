@@ -147,11 +147,11 @@
   ([nodes] (step-proofer ["ALL"] nodes))
   ([codelets nodes]
    (let [{db :db-after {tx :db/current-tx} :tempids}
+         (transact! conn [{:db/id :db/current-tx :matr.tx/codelet-checkpoint true}])]
      (doseq [[stage codelets] (->> (d/q db-codelets-query db)
                                    (reduce (fn [m [k v]]
                                              (update m k (fnil conj []) v))
                                            (sorted-map)))]
-         (transact! conn [{:db/id :db/current-tx :matr.tx/codelet-checkpoint true}])]
        (let [db @conn] ; Each stage needs to be able to see the changes since the previous stage
          (->> (for [codelet codelets]
                 (do

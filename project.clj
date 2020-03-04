@@ -11,7 +11,8 @@
                  [cljs-ajax "0.8.0"]
                  [datascript "0.18.2"]
                  [com.taoensso/timbre "4.10.0"]
-                 [io.forward/yaml "1.0.9"]]
+                 [io.forward/yaml "1.0.9"]
+                 [org.flatland/ordered "1.5.7"]]
   :main ^:skip-aot matr-core.core
   :target-path "target/%s"
   :profiles {:uberjar {:aot :all}})
