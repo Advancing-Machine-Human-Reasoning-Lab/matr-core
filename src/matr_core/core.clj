@@ -80,6 +80,16 @@
     (GET "/proof" []
       :query-params [minimalResponse :- schema/Bool]
       (resp/ok (db->simple-frontend-json @conn minimalResponse)))
+    (GET "/nodeProof" []
+      :query-params [nodeId :- schema/Int]
+      (let [json (db->simple-frontend-json
+                      (db-restricted
+                       @conn
+                       (conj
+                        (db/find-proof-of @conn
+                                          (db/compute-distances @conn) nodeId)
+                        (db-rootbox-query @conn))) false)]
+            (resp/ok json)))
     (POST "/stepProofer" []
       :query-params [minimalResponse :- schema/Bool]
       (let [c (async/chan)]
