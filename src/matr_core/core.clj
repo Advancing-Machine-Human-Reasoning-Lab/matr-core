@@ -21,7 +21,7 @@
 (defn db->simple-frontend-json
   [db minimal]
   (let [db (if minimal (db-restricted db (extract-proof-eids db)) db)]
-    (d/pull db '[:db/id :matr.box/parent
+    (d/pull db '[:db/id :matr.box/parent :matr.box/logic
                  {(:limit :matr.box/_parent nil) ...
                   (:limit :matr.box/axioms nil) [:matr.node/formula]
                   (:limit :matr.box/goals nil) [:matr.node/formula]
