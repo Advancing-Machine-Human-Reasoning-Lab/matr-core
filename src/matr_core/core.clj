@@ -28,8 +28,9 @@
                   (:limit :matr.box/goals nil) [:matr.node/formula]
                   (:limit :matr.node/_parent nil)
                   [:db/id :matr/kind :matr.justification/inference-name
-                   :matr.node/formula (:limit :matr.node/flags nil)
-                   :matr.box/_axioms :matr.box/_goals
+                   :matr.justification/logic :matr.node/formula
+                   (:limit :matr.node/flags nil) :matr.box/_axioms
+                   :matr.box/_goals
                    {:matr.node/consequents [:db/id :matr/kind :matr.node/formula]
                     :matr.node/_consequents [:db/id :matr/kind :matr.node/formula]}]}]
             (db-rootbox-query db))))
