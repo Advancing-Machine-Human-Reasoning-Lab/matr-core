@@ -201,3 +201,9 @@
         boxes (conj (set (d/q '[:find [?b ...] :in $ [?n ...] :where [?n :matr.node/parent ?b]] db proofs)) 1)
         axioms (set (d/q '[:find [?a ...] :in $ [?b ...] :where [?b :matr.box/axioms ?a]] db boxes))]
     (clojure.set/union goals proofs boxes axioms)))
+
+(defn extract-proof-eids-for [db eid]
+  (let [distances (compute-distances db)
+        proof (find-proof-of db distances eid)
+        boxes (conj (set (d/q '[:find [?b ...] :in $ [?n ...] :where [?n :matr.node/parent ?b]] db proof)) 1)]
+    (clojure.set/union proof boxes)))

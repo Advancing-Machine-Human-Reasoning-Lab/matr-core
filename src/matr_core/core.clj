@@ -13,7 +13,8 @@
             [taoensso.timbre :as timbre :refer [log spy]]
             [yaml.core :as yaml]
             [matr-core.utils :refer [juxt-map db-restricted]]
-            [matr-core.db :as db :refer [schema conn db-rootbox-query extract-proof-eids transact!]]
+            [matr-core.db :as db :refer [schema conn db-rootbox-query extract-proof-eids
+                                         transact! extract-proof-eids-for]]
             [matr-core.actions :refer [actions->transaction Action]]
             [matr-core.codelets :refer [step-proofer]])
   (:gen-class))
@@ -83,12 +84,10 @@
     (GET "/nodeProof" []
       :query-params [nodeId :- schema/Int]
       (let [json (db->simple-frontend-json
-                      (db-restricted
-                       @conn
-                       (conj
-                        (db/find-proof-of @conn
-                                          (db/compute-distances @conn) nodeId)
-                        (db-rootbox-query @conn))) false)]
+                  (db-restricted
+                   @conn
+                   (extract-proof-eids-for @conn nodeId))
+                  false)]
             (resp/ok json)))
     (POST "/stepProofer" []
       :query-params [minimalResponse :- schema/Bool]
