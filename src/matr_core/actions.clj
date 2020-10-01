@@ -21,27 +21,26 @@
         new-axioms (actually-new-axioms db boxid newaxioms)]
     (if (seq new-axioms)
       (if-let [b (run-db-box-query db boxid logic newaxioms)]
-        [{:db/id formula
+        [{:db/id (str b "-" formula)
           :matr/kind :matr.kind/node
           :matr.node/parent b
           :matr.node/formula formula}
          [:db/add b :matr.box/goals formula]]
-        [{:db/id formula
-          :matr/kind :matr.kind/node
-          :matr.node/formula formula}
-         {:matr/kind :matr.kind/box
+        [{:matr/kind :matr.kind/box
           :matr.node/_parent
-          (into [] (concat (map (fn [f] {:db/id f :matr.node/formula f
-                                         :matr.node/flags ["checked"]
-                                         :matr/kind :matr.kind/node})
+          (into [] (concat (map (fn [f] {:matr.node/formula f
+                                        :matr.node/flags ["checked"]
+                                        :matr/kind :matr.kind/node})
                                 new-axioms)
-                           [formula]))
+                           [{:matr/kind :matr.kind/node
+                             :matr.node/formula formula}]))
           :matr.box/axioms (into [] new-axioms)
           :matr.box/goals [formula]
           :matr.box/logic logic
           :matr.box/parent boxid}])
       [(or (anteceedent-nodes-map formula)
-           {:matr/kind :matr.kind/node
+           {:db/id (str boxid "-" formula)
+            :matr/kind :matr.kind/node
             :matr.node/formula formula
             :matr.node/parent boxid})])))
 
@@ -113,7 +112,7 @@
     (when-not justification
       (let [consequence (or (consequentIdMap consequence)
                             {:matr/kind :matr.kind/node
-                             :db/id consequence
+                             :db/id (str boxid "-" consequence)
                              :matr.node/formula consequence
                              :matr.node/parent boxid})
             newsyms (all-newsyms db newsyms antecedents)
@@ -141,7 +140,7 @@
                    :where [?e :matr.node/formula ?f] [?e :matr.node/parent ?b]]
                  db (:formula action) (:box action))
     [{:matr/kind :matr.kind/node
-      :db/id (:formula action)
+      :db/id (str (:box action) "-" (:formula action))
       :matr.node/formula (:formula action)
       :matr.node/parent (:box action)}]))
 
@@ -159,7 +158,8 @@
       [{:db/id eid
         :matr.node/flags ["checked"]
         :matr.box/_axioms rootbox}]
-      [{:matr/kind :matr.kind/node
+      [{:db/id (str rootbox "-" formula)
+        :matr/kind :matr.kind/node
         :matr.node/formula formula
         :matr.node/parent rootbox
         :matr.node/flags ["checked"]
@@ -178,7 +178,8 @@
                       db formula rootbox)]
       [{:db/id eid
         :matr.box/_goals rootbox}]
-      [{:matr/kind :matr.kind/node
+      [{:db/id (str rootbox "-" formula)
+        :matr/kind :matr.kind/node
         :matr.node/formula formula
         :matr.node/parent rootbox
         :matr.box/_goals rootbox}])))
