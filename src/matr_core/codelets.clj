@@ -1,5 +1,6 @@
 (ns matr-core.codelets
   (:require
+   [clojure.core.async :as a]
    [clojure.edn :as edn]
    [ajax.core :as ajax]
    [datascript.core :as d]
@@ -98,7 +99,7 @@
 
 (defn handle-codelet-response
   "Convert and run the actions returned by the codelet server."
-  [codelet iteration-tx]
+  [codelet iteration-tx chan]
   (fn [resp]
     (try
       (doseq [transaction (codelet-response->transactions resp)]
@@ -108,6 +109,7 @@
           (doseq [q error-queries]
             (when (and (not (seq (d/q q (:db-before tx)))) (seq (d/q q (:db-after tx))))
               (swap! errors conj [q transaction tx])))))
+      (a/go (a/>! chan :done))
       (catch Exception e
         (log :debug e)))))
 
@@ -137,6 +139,13 @@
                                             @conn)) x))
               (transact! conn [[:db/add x :matr.node/flags "checked"]]))))))))
 
+(defn async-all [chans]
+  (a/go-loop [chanset (set chans) res {}]
+    (if-let [chan-seq (seq chanset)]
+      (let [[val chan] (a/alts! chan-seq)]
+        (recur (disj chanset chan) (assoc res chan val)))
+      (map res chans))))
+
 (defn step-proofer
   "Explore unexplored nodes by sending them to the codelets server and
   reiterating justifications applicable to them."
@@ -154,20 +163,21 @@
                                            (sorted-map)))]
        (let [db @conn] ; Each stage needs to be able to see the changes since the previous stage
          (->> (for [codelet codelets]
-                (do
-                  (let [res (if (:matr.codelet/query-include-since codelet)
-                              (d/q (edn/read-string (:matr.codelet/query codelet))
-                                   db
-                                   (db-since db (:matr.codelet/transaction-since codelet)))
-                              (d/q (edn/read-string (:matr.codelet/query codelet)) db))]
-                    (when (if (seqable? res) (seq res) res)
-                      (ajax/POST (:matr.codelet/endpoint codelet)
-                                 {:format :json
-                                  :response-format :json
-                                  :keywords? true
-                                  :params res
-                                  :handler (handle-codelet-response codelet tx)})))))
+                (let [res (if (:matr.codelet/query-include-since codelet)
+                            (d/q (edn/read-string (:matr.codelet/query codelet))
+                                 db
+                                 (db-since db (:matr.codelet/transaction-since codelet)))
+                            (d/q (edn/read-string (:matr.codelet/query codelet)) db))
+                      chan (a/chan)]
+                  (when (if (seqable? res) (seq res) res)
+                    (ajax/POST (:matr.codelet/endpoint codelet)
+                      {:format :json
+                       :response-format :json
+                       :keywords? true
+                       :params res
+                       :handler (handle-codelet-response codelet tx chan)})
+                    chan)))
               (filter identity)
               doall
-              (map deref)
-              doall))))))
+              async-all
+              a/<!!))))))
