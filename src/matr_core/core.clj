@@ -12,6 +12,7 @@
             [datascript.core :as d]
             [taoensso.timbre :as timbre :refer [log spy]]
             [yaml.core :as yaml]
+            [matr-core.latex-converter :refer [s-exp->latex]]
             [matr-core.utils :refer [juxt-map db-restricted]]
             [matr-core.db :as db :refer [schema conn db-rootbox-query extract-proof-eids
                                          transact! extract-proof-eids-for]]
@@ -79,6 +80,16 @@
 (def app
   (-> 
    (api
+    (GET "/generateProofJSON" []
+      (letfn [(add-latex-to-box [box]
+                (update box :matr.node/_parent add-latex-to-nodes))
+              (add-latex-to-nodes [nodes]
+                                  (mapv add-latex-to-node nodes))
+              (add-latex-to-node [node]
+                                 (if (= (:matr/kind node) :matr.kind/node)
+                                   (assoc node :latex (s-exp->latex (:matr.node/formula node)))
+                                   node))]
+        (resp/ok (add-latex-to-box (db->simple-frontend-json @conn true)))))
     (GET "/proof" []
       :query-params [minimalResponse :- schema/Bool]
       (resp/ok (db->simple-frontend-json @conn minimalResponse)))
