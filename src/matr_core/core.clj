@@ -82,13 +82,13 @@
    (api
     (GET "/generateProofJSON" []
       (letfn [(add-latex-to-box [box]
-                (update box :matr.node/_parent add-latex-to-nodes))
-              (add-latex-to-nodes [nodes]
-                                  (mapv add-latex-to-node nodes))
+                (-> box
+                    (update :matr.node/_parent #(mapv add-latex-to-node %))
+                    (update :matr.box/_parent #(mapv add-latex-to-box %))))
               (add-latex-to-node [node]
-                                 (if (= (:matr/kind node) :matr.kind/node)
-                                   (assoc node :latex (s-exp->latex (:matr.node/formula node)))
-                                   node))]
+                (if (= (:matr/kind node) :matr.kind/node)
+                  (assoc node :latex (s-exp->latex (:matr.node/formula node)))
+                  node))]
         (resp/ok (add-latex-to-box (db->simple-frontend-json @conn true)))))
     (GET "/proof" []
       :query-params [minimalResponse :- schema/Bool]
