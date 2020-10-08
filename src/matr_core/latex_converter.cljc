@@ -1,4 +1,4 @@
-(ns matr-core.latex-converter
+(ns matr-gui-clj.latex-converter
   (:require [clojure.string :as s]
             #?(:cljs [cljs.reader :as edn :refer [read-string]]
                :clj [clojure.edn :as edn :refer [read-string]])))
@@ -20,8 +20,8 @@
 (defn detect-paren-loss
   "Returns single closing paren if read-string drops closing paren due to not finding a matching open paren. Necessary for handling when an s-expression is split into two strings such that the outer pair of parens is no longer contained within a single string."
   [^String sym]
-  (if (and (= (count (str (read-string sym)))
-              (dec (count sym)))
+  (if (and (= (.-length (str (read-string sym)))
+              (dec (.-length sym)))
            (= (last sym) \)))
     ")"
     ""))
@@ -29,8 +29,8 @@
 (defn paren-loss?
   "Returns single closing paren if read-string drops closing paren due to not finding a matching open paren. Necessary for handling when an s-expression is split into two strings such that the outer pair of parens is no longer contained within a single string."
   [^String sym]
-  (true? (and (= (count (str (read-string sym)))
-                 (dec (count sym)))
+  (true? (and (= (.-length (str (read-string sym)))
+                 (dec (.-length sym)))
               (= (last sym) \)))))
 
 (defn ends-in-urcorner? [^String sym]
@@ -48,7 +48,7 @@
 (defn strip-first+last
   "Takes in string and returns substring with first and last indices removed."
   [^String string]
-  (subs string 1 (dec (count string))))
+  (subs string 1 (dec (.-length string))))
 
 (defn strip-outer-braces
   "Takes in string and returns substring with outer-most enclosing curly braces removed. Curly braces need not surround entire expression or be the beginning or end of string. If multiple non-nested curly braces exist, function will fail to remove proper pair, though function will work properly if all curly brace pairs are nested within each other."
@@ -105,13 +105,10 @@
   (not (nil? (some #(= % var) (keys greek-map)))))
 ; 09/19
 (defn var->latex-text [sym]
-  (let [[butlast-s last-s] (map (partial reduce str) (split-at (dec (count sym)) sym))]
+  (let [[butlast-s last-s] (map (partial apply str) (split-at (dec (count sym)) sym))]
     (if (= last-s ")")
       (str "\\text{" butlast-s "}" last-s)
       (str "\\text{" butlast-s last-s "}"))))
-
-(comment (defn var->latex-text [^String sym]
-           (str "\\text{" sym "}")))
 
 (defn prefix->infix
   "Takes in a (string) arithmetic s-expression and outputs its infix equivalent (as a list)"
@@ -179,7 +176,7 @@
                           s-exp-s)]
         (if (and (list? (read-string braceless-s)) (> (count (read-string braceless-s)) 1))
           (-> braceless-s read-string first s-exp->fn)
-          (if (greek? braceless-s)
+          (if (or (greek? braceless-s) (s/starts-with? braceless-s "Z_"))
             #'identity
             #'var->latex-text))))))
 
@@ -204,14 +201,6 @@
         latex-cmd (if (greek? (str f)) (greek-map (str f)) (str "\\text{" f "}"))] ; convert string->list
     (multi-arity-fn->latex s-exp-s latex-cmd)))
 
-(comment (defn predicate-fn->latex
-           "Generic unary function that takes in a (string) s-expression and a (string) latex-cmd and returns the latex equivalent expression."
-           [s-exp-s]
-           (let [s-exp (read-string s-exp-s)
-                 pred-fn (str "\\text{" (first s-exp) "}")
-                 arg (last s-exp)]
-             (list pred-fn (str "(" arg ")")))))
-
 (defn not->latex
   "Takes in (string) s-expression that begins with \"NOT\" and converts into string with exists statement in latex format and arguments unchanged."
   [not-s]
@@ -235,6 +224,19 @@
 
 ;; Modal functions
 
+(defn first-arg-modal? [s-exp]
+  (and (seqable? s-exp)
+       (contains? #{'OR 'AND 'IFF 'IMPLIES '+ '> '<} (first s-exp))))
+
+(defn modal-fn->latex [s-exp-s latex-cmd]
+  (let [[s-exp-arg1 & rem-args] (prefix->infix s-exp-s)
+        latex-arg1 (s-exp->latex (str s-exp-arg1) true)
+        last-arg (str (last rem-args))]
+    (list
+     (if (first-arg-modal? s-exp-arg1)
+       (str "(" latex-arg1 ") " latex-cmd " ")
+       (str latex-arg1 " " latex-cmd " "))
+     last-arg)))
 
 (defn modal-fn->latex
   "Generic modal function that takes in a (string) s-expression and a (string) latex-cmd and returns a list of two strings with the first string containing the latex equivalent of the function and its first argument and the second string containing the second argument unchanged."
@@ -245,7 +247,7 @@
 (defn iff->latex
   "Takes in (string) s-expression that begins with \"IFF\" and converts into a list of two strings with the first string consisting of the implies statement and first argument in latex format and and the second string consisting of the second argument unchanged."
   [iff-s]
-  (modal-fn->latex iff-s "\\iff"))
+  (modal-fn->latex iff-s "\\leftrightarrow"))
 
 (defn and->latex
   "Takes in (string) s-expression that begins with \"AND\" and converts into a list of two strings with the first string consisting of the implies statement and first argument in latex format and and the second string consisting of the second argument unchanged."
@@ -253,15 +255,29 @@
   (modal-fn->latex and-s "\\wedge"))
 
 (defn or->latex
-  "Takes in (string) s-expression that begins with \"AND\" and converts into a list of two strings with the first string consisting of the implies statement and first argument in latex format and and the second string consisting of the second argument unchanged."
+  "Takes in (string) s-expression that begins with \"OR\" and converts into a list of two strings with the first string consisting of the implies statement and first argument in latex format and and the second string consisting of the second argument unchanged."
   [or-s]
   (modal-fn->latex or-s "\\vee"))
 
 (defn implies->latex
   "Takes in (string) s-expression that begins with \"IMPLIES\" and converts into a list of two strings with the first string consisting of the implies statement and first argument in latex format and and the second string consisting of the second argument unchanged."
-  [imp]
-  (modal-fn->latex imp "\\rightarrow"))
+  [imp-s]
+  (modal-fn->latex imp-s "\\rightarrow"))
 
+(defn +->latex
+  "Takes in (string) s-expression that begins with \"+\" and converts into a list of two strings with the first string consisting of the implies statement and first argument in latex format and and the second string consisting of the second argument unchanged."
+  [plus-s]
+  (modal-fn->latex plus-s "+"))
+
+(defn gt->latex
+  "Takes in (string) s-expression that begins with \">\" and converts into a list of two strings with the first string consisting of the implies statement and first argument in latex format and and the second string consisting of the second argument unchanged."
+  [gt-s]
+  (modal-fn->latex gt-s ">"))
+
+(defn lt->latex
+  "Takes in (string) s-expression that begins with \">\" and converts into a list of two strings with the first string consisting of the implies statement and first argument in latex format and and the second string consisting of the second argument unchanged."
+  [lt-s]
+  (modal-fn->latex lt-s "<"))
 
 ;; Binary functions
 
@@ -275,7 +291,7 @@
   (let [s-exp (read-string s-exp-s) ; convert string->list
         first-arg (str (second s-exp)) ; underscore for exists
         full-rem-args (str (rest (rest s-exp))) ; extra pair of parens
-        trimmed-rem-args (subs full-rem-args 1 (dec (count full-rem-args)))]
+        trimmed-rem-args (subs full-rem-args 1 (dec (.-length full-rem-args)))]
     (list (str latex-cmd "{" (s-exp->latex first-arg true) "} ") trimmed-rem-args)))
 
 (defn exists2->latex
@@ -297,7 +313,7 @@
   (let [s-exp (read-string s-exp-s) ; convert string->list
         first-arg (str (second s-exp))
         full-rem-args (str (rest (rest s-exp))) ; extra pair of parens
-        trimmed-rem-args (subs full-rem-args 1 (dec (count full-rem-args)))]
+        trimmed-rem-args (subs full-rem-args 1 (dec (.-length full-rem-args)))]
     (list (str latex-cmd " (" (s-exp->latex first-arg true) ", ") (str trimmed-rem-args ")"))))
 
 (defn PROVES->latex
@@ -340,7 +356,11 @@
                   'FORALL   #'forall2->latex
                   'FORALL2  #'forall2->latex
                   'Opposite #'opposite->latex
-                  'IMPLIES  #'implies->latex})
+                  'IMPLIES  #'implies->latex
+                  '+        #'+->latex
+                  'plus     #'+->latex
+                  '>        #'gt->latex
+                  '<        #'lt->latex})
 
 (defn s-exp->fn [k]
   (if (nil? (s-exp->fn-m k)) #'predicate-fn->latex (s-exp->fn-m k)))
