@@ -1,4 +1,4 @@
-(ns matr-gui-clj.latex-converter
+(ns matr-core.latex-converter
   (:require [clojure.string :as s]
             #?(:cljs [cljs.reader :as edn :refer [read-string]]
                :clj [clojure.edn :as edn :refer [read-string]])))

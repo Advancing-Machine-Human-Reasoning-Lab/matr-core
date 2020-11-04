@@ -1,0 +1,21 @@
+{:deps
+ {org.clojure/clojure {:mvn/version "1.10.0"}
+  org.clojure/core.async {:mvn/version "0.4.490"}
+  ring-cors/ring-cors {:mvn/version "0.1.13"}
+  metosin/compojure-api {:mvn/version "2.0.0-alpha30"}
+  ring/ring-jetty-adapter {:mvn/version "1.7.1"}
+  cljs-ajax/cljs-ajax {:mvn/version "0.8.0"}
+  datascript/datascript {:mvn/version "0.18.2"}
+  clj-time/clj-time {:mvn/version "0.15.1"}
+  com.taoensso/timbre {:mvn/version "4.10.0"}
+  io.forward/yaml {:mvn/version "1.0.9"}
+  org.flatland/ordered {:mvn/version "1.5.7"}}
+ :paths ["src"]
+ :aliases {:uberjar {:extra-deps {seancorfield/depstar {:mvn/version "1.1.132"}}
+           :exec-fn hf.depstar.uberjar/run
+           :exec-args {:jar "target/uberjar/matr.jar"
+                       :aot true
+                       :main-class matr-core.core}}
+           :depstar
+           {:extra-deps
+            {seancorfield/depstar {:mvn/version "1.1.132"}}}}}
