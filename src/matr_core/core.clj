@@ -6,6 +6,7 @@
             [compojure.route :as route]
             [ring.middleware.cors :refer [wrap-cors]]
             [ring.middleware.multipart-params.byte-array :refer [byte-array-store]]
+            [ring.middleware.resource :as resource]
             [compojure.api.upload :as upload]
             [schema.core :as schema]
             [ring.util.http-response :as resp]
@@ -136,9 +137,17 @@
         :body [{:keys [query endpoint stage since] :or {stage 0 since false}} RegisterCodeletRequest]
         :summary "Register a codelet"
         (register-codelet! query endpoint stage since)
-        (resp/ok))
-      (undocumented
-       (route/not-found {:not "found"}))))
+        (resp/ok)))
+    (GET "/" []
+         (resp/resource-response "public/index.html"))
+    (GET "/*" request
+         (do
+           (prn request)
+           (spit "dump.txt" "invoked")
+           (resource/resource-request request "public"))))
+      ;(undocumented
+       ;(route/not-found {:not "found"}))))
+   ;(resource/wrap-resource "public/")
    (wrap-cors
     :access-control-allow-origin [#".*"]
     :access-control-allow-methods [:get :post :options])))
@@ -172,7 +181,8 @@
   (when-let [s @server]
     (async/>!! (:cin s) {:type :exit})))
 
-(def -main start-server!)
+(def -main (do (println "server started")
+               start-server!))
 
 (defn make-example-db []
   (let [db (d/create-conn schema)]

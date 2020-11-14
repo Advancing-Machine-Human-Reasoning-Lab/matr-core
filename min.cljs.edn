@@ -1,0 +1,6 @@
+{:output-to "resources/public/js/compiled/matr_gui_clj.js"
+ :main matr-gui-clj.core
+ :optimizations :simple
+ :pretty-print false
+ :output-dir "resources/public/js/compiled/cljs-out/min"
+ :source-map "resources/public/js/compiled/matr_gui_clj.js.map"}

@@ -9,13 +9,27 @@
   clj-time/clj-time {:mvn/version "0.15.1"}
   com.taoensso/timbre {:mvn/version "4.10.0"}
   io.forward/yaml {:mvn/version "1.0.9"}
-  org.flatland/ordered {:mvn/version "1.5.7"}}
- :paths ["src"]
- :aliases {:uberjar {:extra-deps {seancorfield/depstar {:mvn/version "1.1.132"}}
-           :exec-fn hf.depstar.uberjar/run
-           :exec-args {:jar "target/uberjar/matr.jar"
-                       :aot true
-                       :main-class matr-core.core}}
+  org.flatland/ordered {:mvn/version "1.5.7"}
+  ;; cljs
+  org.clojure/clojurescript {:mvn/version "1.10.520"}
+  reagent/reagent {:mvn/version "0.8.1"}
+  cljs-http/cljs-http {:mvn/version "0.1.46"}
+  cljsjs/jquery {:mvn/version "3.4.0-0"}
+  jayq/jayq {:mvn/version "2.5.5"}
+  cljsjs/cytoscape {:mvn/version "3.1.4-0"}
+  cljsjs/mathjax {:mvn/version "2.7.5-0"}
+  data-frisk-reagent/data-frisk-reagent {:mvn/version "0.4.5"}
+  cljsjs/filesaverjs {:mvn/version "1.3.3-0"}
+  antizer/antizer {:mvn/version "0.3.1"}}
+ :paths ["src" "resources"]
+ :aliases {:uberjar
+           {:extra-deps {seancorfield/depstar {:mvn/version "1.1.132"}}
+            :exec-fn hf.depstar.uberjar/run
+            :exec-args {:jar "target/uberjar/matr.jar"
+                        :aot true
+                        :main-class matr-core.core}}
            :depstar
            {:extra-deps
-            {seancorfield/depstar {:mvn/version "1.1.132"}}}}}
+            {seancorfield/depstar {:mvn/version "1.1.132"}}}
+           :dev {:extra-deps {com.bhauman/figwheel-main {:mvn/version "0.2.3"}}}
+           :min {:main-opts ["-m" "figwheel.main" "-bo" "min"]}}}
