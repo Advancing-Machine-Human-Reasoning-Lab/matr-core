@@ -1,0 +1,14 @@
+name: compile-on-push
+on: push
+
+defaults:
+  run:
+    shell: bash
+    working-directory: ./
+
+jobs:
+  compile:
+    runs-on: ubuntu-latest
+    steps:
+    - id: s1
+      run: make
