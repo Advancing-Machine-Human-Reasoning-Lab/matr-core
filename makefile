@@ -30,11 +30,11 @@ JS_TARGET = resources/public/js/compiled/matr_gui_clj.js
 UBERJAR = target/uberjar/matr.jar
 
 $(UBERJAR): $(CLJ_SOURCES) $(JS_TARGET) pom.xml
-	clj -X:uberjar
+	clojure -X:uberjar
 
 pom.xml: deps.edn
-	clj -Spom
+	clojure -Spom
 
 $(JS_TARGET): $(FRONTEND_DEPS)
-	clj -M:dev:min
+	clojure -M:dev:min
 # end
