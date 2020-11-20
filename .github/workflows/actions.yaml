@@ -21,7 +21,5 @@ jobs:
         uses: DeLaGuardo/setup-clojure@master
         with:
           cli: 1.10.1.693
-      - name: Install rlwrap
-        uses: hanslub42/rlwrap@master
       - name: Compile
         run: make
