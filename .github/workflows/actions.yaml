@@ -12,7 +12,7 @@ jobs:
     # Credit to DeLaGuardo for this GitHub Action
     steps:
       - name: Checkout
-        uses: actions/checkout@latest
+        uses: actions/checkout@v2
       - name: Prepare Java
         uses: actions/setup-java@v1
         with:
