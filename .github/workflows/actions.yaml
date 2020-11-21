@@ -24,7 +24,7 @@ jobs:
       - name: Compile
         run: make
       - name: Add Uberjar
-        run: git add target/uberjar/matr.jar
+        run: git add -f target/uberjar/matr.jar
       - name: Commit Uberjar
         # Use same commit message as push that triggered github action
         run: git commit -m ${{ github.event.head_commit.message }}
