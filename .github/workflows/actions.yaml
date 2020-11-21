@@ -27,7 +27,7 @@ jobs:
         run: git add -f target/uberjar/matr.jar
       - name: Commit Uberjar
         # Use same commit message as push that triggered github action
-        run: git commit -m ${{ github.event.head_commit.message }}
+        run: git commit -m "auto compile new uberjar"
       - name: Fetch from master
         run: git fetch origin master
       - name: Push code to master
