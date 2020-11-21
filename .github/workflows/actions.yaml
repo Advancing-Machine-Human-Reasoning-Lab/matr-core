@@ -23,7 +23,12 @@ jobs:
           cli: 1.10.1.693
       - name: Compile
         run: make
-      - name: Push new files back to master.
-        uses: mikeal/publish-to-github-action@1.0.0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Add Uberjar
+        run: git add target/uberjar/matr.jar
+      - name: Commit Uberjar
+        # Use same commit message as push that triggered github action
+        run: git commit -m ${{ github.event.head_commit.message }}
+      - name: Fetch from master
+        run: git fetch origin master
+      - name: Push code to master
+        run: git push origin HEAD:master
