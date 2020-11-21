@@ -23,7 +23,7 @@ jobs:
           cli: 1.10.1.693
       - name: Compile
         run: make
-      - uses: EndBug/add-and-compile@v5
+      - uses: EndBug/add-and-commit@v5
         with:
           add: 'target/uberjar/matr.jar'
         env:
