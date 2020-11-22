@@ -25,9 +25,7 @@ jobs:
         run: make
       - name: Get Latest Release
         id: latest_version
-        run: git fetch --tags
-        run: LATEST_RELEASE=$(git tag | tail -1)
-        run: echo "::set-output name=LATEST_RELEASE::" $LATEST_RELEASE
+        run: git fetch --tags && LATEST_RELEASE=$(git tag | tail -1) && echo "::set-output name=LATEST_RELEASE::" $LATEST_RELEASE
       - name: Bump release version
         id: bump_version
         uses: christian-draeger/increment-semantic-version@1.0.2
