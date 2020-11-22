@@ -24,7 +24,7 @@ jobs:
       - name: Compile
         run: make
       - id: fetch-latest-release
-        uses: thebritican/fetch-latest-release@v1
+        uses: thebritican/fetch-latest-release@v2
         with:
           github_token: ${{ github.token }}
       - name: Bump release version
