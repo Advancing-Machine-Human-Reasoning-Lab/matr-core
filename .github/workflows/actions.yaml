@@ -23,11 +23,31 @@ jobs:
           cli: 1.10.1.693
       - name: Compile
         run: make
-      - uses: EndBug/add-and-commit@v5
-        with:
-          add: 'target/uberjar/matr.jar'
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: false
+      - name: Upload Release Asset
+        id: upload-release-asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: target/uberjar/matr.jar
+          asset_name: matr.jar
+          asset_content_type: application/jar
+      #- uses: EndBug/add-and-commit@v5
+        #with:
+          #add: 'target/uberjar/matr.jar'
+        #env:
+          #GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         #- name: Add Uberjar
       #  run: git add -f target/uberjar/matr.jar
       #- name: Commit Uberjar
