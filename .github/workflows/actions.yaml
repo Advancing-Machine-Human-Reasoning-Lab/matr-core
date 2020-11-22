@@ -23,14 +23,26 @@ jobs:
           cli: 1.10.1.693
       - name: Compile
         run: make
+      - id: fetch-latest-release
+        uses: thebritican/fetch-latest-release@v1
+        with:
+          github_token: ${{ github.token }}
+      - name: Bump release version
+        id: bump_version
+        uses: christian-draeger/increment-semantic-version@1.0.2
+        with:
+          current-version: ${{ steps.fetch-latest-release.outputs.tag_name }}
+          # More clever logic could potentially be used here to automate the
+          # process of determining 'bug' vs. 'feature' vs. 'major'
+          version-fragment: 'bug'
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
+          tag_name: ${{ steps.bump_version.outputs.next-version }}
+          release_name: Release ${{ steps.bump_version.outputs.next-version }}
           draft: false
           prerelease: false
       - name: Upload Release Asset
