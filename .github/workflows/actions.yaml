@@ -23,15 +23,15 @@ jobs:
           cli: 1.10.1.693
       - name: Compile
         run: make
-      - id: fetch-latest-release
-        uses: thebritican/fetch-latest-release@v2
+      - id: timeseries
+        uses: pozetroninc/github-action-get-latest-release@master
         with:
-          github_token: ${{ github.token }}
+          repository: AMHRLab/matr-core
       - name: Bump release version
         id: bump_version
         uses: christian-draeger/increment-semantic-version@1.0.2
         with:
-          current-version: ${{ steps.fetch-latest-release.outputs.tag_name }}
+          current-version: ${{ steps.timeseries.outputs.release }}
           # More clever logic could potentially be used here to automate the
           # process of determining 'bug' vs. 'feature' vs. 'major'
           version-fragment: 'bug'
