@@ -25,15 +25,14 @@ jobs:
         run: make
       - name: Get Latest Release
         id: latest_version
-        uses: abatilo/release-info-action@v1.3.0
-        with:
-          owner: AMHRLab
-          repo: matr-core
+        run: git fetch --tags
+        run: LATEST_RELEASE=$(git tag | tail -1)
+        run: echo "::set-output name=LATEST_RELEASE::" $LATEST_RELEASE
       - name: Bump release version
         id: bump_version
         uses: christian-draeger/increment-semantic-version@1.0.2
         with:
-          current-version: ${{ steps.latest_version.outputs.latest_tag }}
+          current-version: ${{ steps.latest_version.outputs.LATEST_RELEASE }}
           # More clever logic could potentially be used here to automate the
           # process of determining 'bug' vs. 'feature' vs. 'major'
           version-fragment: 'bug'
