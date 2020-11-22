@@ -29,9 +29,6 @@ jobs:
         with:
           owner: AMHRLab
           repo: matr-core
-        uses: pozetroninc/github-action-get-latest-release@master
-        with:
-          repository: AMHRLab/matr-core
       - name: Bump release version
         id: bump_version
         uses: christian-draeger/increment-semantic-version@1.0.2
