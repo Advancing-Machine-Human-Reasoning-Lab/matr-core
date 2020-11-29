@@ -4,7 +4,7 @@
    [reagent.core :as reagent :refer [atom]]
    [cljsjs.cytoscape]
    [clojure.string :as s]
-   [matr-gui-clj.latex-converter :refer [s-exp->latex axioms]]))
+   [common.latex-converter :refer [s-exp->latex axioms]]))
 
 (defonce cytoscape-instance (atom nil))
 

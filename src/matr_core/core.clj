@@ -13,7 +13,7 @@
             [datascript.core :as d]
             [taoensso.timbre :as timbre :refer [log spy]]
             [yaml.core :as yaml]
-            [matr-core.latex-converter :refer [s-exp->latex]]
+            [common.latex-converter :refer [s-exp->latex]]
             [matr-core.utils :refer [juxt-map db-restricted]]
             [matr-core.db :as db :refer [schema conn db-rootbox-query extract-proof-eids
                                          transact! extract-proof-eids-for]]
