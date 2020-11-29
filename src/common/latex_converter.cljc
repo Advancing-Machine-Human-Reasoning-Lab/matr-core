@@ -1,4 +1,4 @@
-(ns matr-core.latex-converter
+(ns common.latex-converter
   (:require [clojure.string :as s]
             #?(:cljs [cljs.reader :as edn :refer [read-string]]
                :clj [clojure.edn :as edn :refer [read-string]])))
@@ -224,11 +224,13 @@
 
 ;; Modal functions
 
+
 (defn first-arg-modal? [s-exp]
   (and (seqable? s-exp)
        (contains? #{'OR 'AND 'IFF 'IMPLIES '+ '> '<} (first s-exp))))
 
 (defn modal-fn->latex [s-exp-s latex-cmd]
+  "Generic modal function that takes in a (string) s-expression and a (string) latex-cmd and returns a list of two strings with the first string containing the latex equivalent of the function and its first argument and the second string containing the second argument unchanged."
   (let [[s-exp-arg1 & rem-args] (prefix->infix s-exp-s)
         latex-arg1 (s-exp->latex (str s-exp-arg1) true)
         last-arg (str (last rem-args))]
@@ -237,12 +239,6 @@
        (str "(" latex-arg1 ") " latex-cmd " ")
        (str latex-arg1 " " latex-cmd " "))
      last-arg)))
-
-(defn modal-fn->latex
-  "Generic modal function that takes in a (string) s-expression and a (string) latex-cmd and returns a list of two strings with the first string containing the latex equivalent of the function and its first argument and the second string containing the second argument unchanged."
-  [s-exp-s latex-cmd]
-  (let [s-exp (prefix->infix s-exp-s)]
-    (list (str (s-exp->latex (str (first s-exp)) true) " " latex-cmd " ") (str (last s-exp)))))
 
 (defn iff->latex
   "Takes in (string) s-expression that begins with \"IFF\" and converts into a list of two strings with the first string consisting of the implies statement and first argument in latex format and and the second string consisting of the second argument unchanged."

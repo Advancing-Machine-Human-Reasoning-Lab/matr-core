@@ -6,6 +6,8 @@ SOURCEDIR := $(PROJDIR)/src
 CLJ_SOURCEDIR := $(SOURCEDIR)/matr_core
 # Directory for *.cljs source files
 CLJS_SOURCEDIR := $(SOURCEDIR)/matr_gui_clj
+# Directory for *.cljc source files
+CLJS_SOURCEDIR := $(SOURCEDIR)/common
 RESOURCEDIR := $(PROJDIR)/resources
 CSSDIR := $(RESOURCEDIR)/public/css
 IMAGEDIR := $(RESOURCEDIR)/public/images
@@ -16,7 +18,7 @@ CLJ_SOURCES   = $(wildcard $(CLJ_SOURCEDIR)/*.clj)
 # List of *.cljs source files
 CLJS_SOURCES  = $(wildcard $(CLJS_SOURCEDIR)/*.cljs)
 # List of *.cljc source files
-CLJC_SOURCES  = $(wildcard $(CLJ_SOURCEDIR)/*.cljc)
+CLJC_SOURCES  = $(wildcard $(CLJC_SOURCEDIR)/*.cljc)
 HTML_DEPS = $(RESOURCEDIR)/kioo_template.html $(RESOURCEDIR)/public/index.html
 CSS_DEPS  = $(wildcard $(CSSDIR)/*.css)
 JS_DEPS  = $(wildcard $(JSDIR)/*.js)
