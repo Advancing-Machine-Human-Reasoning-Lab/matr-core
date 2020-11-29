@@ -1,5 +1,5 @@
 # matr-core
-
+![build](https://github.com/AMHRLab/matr-core/workflows/build/badge.svg)
 FIXME: description
 
 ## Installation
@@ -8,9 +8,7 @@ Download from http://example.com/FIXME.
 
 ## Usage
 
-FIXME: explanation
-
-    $ java -jar matr-core-0.1.0-standalone.jar [args]
+    $ java -jar target/uberjar/
 
 ## Options
 
