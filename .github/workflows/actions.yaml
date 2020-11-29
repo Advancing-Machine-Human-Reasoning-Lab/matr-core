@@ -40,13 +40,13 @@ jobs:
           #release_name: Release ${{ steps.latest_version.outputs.LATEST_RELEASE }}
       #    draft: false
       #    prerelease: false
-      - name: Upload Release Asset
-        id: upload-release-asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: target/uberjar/matr.jar
-          asset_name: matr.jar
-          asset_content_type: application/jar
+      #- name: Upload Release Asset
+      #  id: upload-release-asset
+      #  uses: actions/upload-release-asset@v1
+      #  env:
+      #    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #  with:
+      #    upload_url: ${{ steps.create_release.outputs.upload_url }}
+      #    asset_path: target/uberjar/matr.jar
+      #    asset_name: matr.jar
+      #    asset_content_type: application/jar
