@@ -9,7 +9,6 @@ jobs:
   compile:
 
     runs-on: ubuntu-latest
-    # Credit to DeLaGuardo for this GitHub Action
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -26,22 +25,16 @@ jobs:
       - name: Get Latest Release
         id: latest_version
         run: git fetch --tags && LATEST_RELEASE=$(git tag | tail -1) && echo "::set-output name=LATEST_RELEASE::" $LATEST_RELEASE
-      - name: Bump release version
-        id: bump_version
-        uses: christian-draeger/increment-semantic-version@1.0.2
-        with:
-          current-version: ${{ steps.latest_version.outputs.LATEST_RELEASE }}
-          # More clever logic could potentially be used here to automate the
-          # process of determining 'bug' vs. 'feature' vs. 'major'
-          version-fragment: 'bug'
+        # Currently fetches most recent release tag and uses this as the tag and
+        # name for the automatic release. Versioning scheme subject to change.
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ steps.bump_version.outputs.next-version }}
-          release_name: Release ${{ steps.bump_version.outputs.next-version }}
+          tag_name: ${{ steps.latest_version.outputs.LATEST_RELEASE }}
+          release_name: Release ${{ steps.latest_version.outputs.LATEST_RELEASE }}
           draft: false
           prerelease: false
       - name: Upload Release Asset
@@ -54,17 +47,3 @@ jobs:
           asset_path: target/uberjar/matr.jar
           asset_name: matr.jar
           asset_content_type: application/jar
-      #- uses: EndBug/add-and-commit@v5
-        #with:
-          #add: 'target/uberjar/matr.jar'
-        #env:
-          #GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        #- name: Add Uberjar
-      #  run: git add -f target/uberjar/matr.jar
-      #- name: Commit Uberjar
-        # Use same commit message as push that triggered github action
-      #  run: git commit -m "auto compile new uberjar"
-      #- name: Fetch from master
-      #  run: git fetch origin master
-      #- name: Push code to master
-      #  run: git push origin HEAD:master
