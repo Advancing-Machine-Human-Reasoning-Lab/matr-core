@@ -25,16 +25,19 @@ jobs:
       - name: Get Latest Release
         id: latest_version
         run: git fetch --tags && LATEST_RELEASE=$(git tag | tail -1) && echo "::set-output name=LATEST_RELEASE::" $LATEST_RELEASE
-        # Currently fetches most recent release tag and uses this as the tag and
-        # name for the automatic release. Versioning scheme subject to change.
+        # TODO fix versioning scheme
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ steps.latest_version.outputs.LATEST_RELEASE }}
-          release_name: Release ${{ steps.latest_version.outputs.LATEST_RELEASE }}
+          tag_name: 'v0.1.1'
+          release_name: 'v0.1.1'
+          # Commented code fetches latest release tag name and uses this as new
+          # tag and release name
+          #tag_name: ${{ steps.latest_version.outputs.LATEST_RELEASE }}
+          #release_name: Release ${{ steps.latest_version.outputs.LATEST_RELEASE }}
           draft: false
           prerelease: false
       - name: Upload Release Asset
