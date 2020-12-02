@@ -144,13 +144,10 @@ node.prove-source {
              (.-innerHTML (.tex2svg js/MathJax latex))))))
 
 (defn str-length->text-width [^String input]
-  (do (println "input is " input)
-      (reduce + 15 (for [word (s/split input #" |(?=\\)|(?=\()|(?=_)|(?=[{])|(?=\))")]
-                     (do
-                       (println "word is " word)
-                       (if (s/includes? word "\\")
-                         12
-                         (* (.-length word) 10)))))))
+  (reduce + 15 (for [word (s/split input #" |(?=\\)|(?=\()|(?=_)|(?=[{])|(?=\))")]
+                 (if (s/includes? word "\\")
+                   12
+                   (* (.-length word) 10)))))
 
 (defn node->cytoscape-nodes [parent {id :db/id, kind :matr/kind, antecedents :matr.node/_consequents, :as node}]
   (cons
