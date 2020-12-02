@@ -1,0 +1,125 @@
+#+TITLE: MATR
+#+AUTHOR: Emma Griffin
+* Examples
+:PROPERTIES:
+:CUSTOM_ID: examples
+:END:
+We may show a simple example of MATR inferring that ~(AND alpha (AND beta gamma))~ is equivalent to ~(AND (AND alpha beta) gamma)~. This example will involve the livecoding setup mentioned previously, though the same example may be achieved using a pre-compiled binary execution of ~matr.jar~, simply omit any steps involving Emacs/Cider.
+** Requirements
+In addition to the ~AMHR/matr-core~ repository, we will be using the ~AMHR/MATRCodelets-REST~ ([[https://github.com/AMHRLab/MATRCodelets-REST/tree/proof_lite][MATRCodelets-REST/proof-lite]]) repository (with the proof-lite branch). For sake of simplicity, we will use the notation ~<MATRCodelets-REST>/~ to refer to the local path of the directory the user has cloned this repository into. 
+
+If you don't have [[https://github.com/python/cpython][Python 3.x]] and [[https://github.com/pypa/pip][pip(3)]] installed, these are also required.
+\\
+Follow the steps outlined in [[#livecoding][Livecoding]] to setup the interactive session. Upon doing so we can start the Codelets server:
+#+BEGIN_SRC shell
+    $ cd <MATRCodelets-Rest>/
+    $ pip3 install -r requirements.txt
+    $ python3 Codelets.py
+#+END_SRC
+or
+#+BEGIN_SRC shell
+    $ cd <MATRCodelets-Rest>/
+    $ pip install -r requirements.txt
+    $ python Codelets.py
+#+END_SRC
+depending on your default version of Python and pip on your system.
+
+You should see output like the following:
+#+BEGIN_SRC shell
+ * Serving Flask app "Codelets" (lazy loading)
+ * Environment: production
+   WARNING: Do not use the development server in a production environment.
+   Use a production WSGI server instead.
+ * Debug mode: off
+ * Running on http://127.0.0.1:5002/ (Press CTRL+C to quit)
+#+END_SRC
+We now need to upload a configuration file to MATR. Click on the button that says "Upload config"
+#+HTML: <p align="center"><img src="./img/MATR_upload_config_button.png" /></p>
+A window will pop up allowing you to choose a config file. Click "Click to upload" and navigate to ~<MATRCodelets-REST>/~. 
+#+HTML: <p align="center"><img src="./img/MATR_upload_config.png" /></p>
+In this directory, select ~config.yaml~, then click "Submit".
+
+The main box in the center of the page should change from a simple round-cornered rectangle to the same rectangle displayed inside a taller rectangle with the text "ML" written beneath the inner rectangle.
+
+#+HTML: <p align="center"><img src="./img/MATR_ML_rootbox.png" /></p>
+
+We can then add our axiom ~(AND alpha (AND beta gamma))~. Click the "Add Axiom" button:
+#+HTML: <p align="center"><img src="./img/MATR_add_axiom_button.png" /></p>
+
+A window will appear with a text box allowing you to enter a formula. Enter "(AND alpha (AND beta gamma))" and hit "Submit".
+#+HTML: <p align="center"><img src="./img/MATR_initial_AND.png" /></p>
+
+The formula will show with the s-expression converted to LaTeX
+
+#+HTML: <p align="center"><img src="./img/MATR_initial_AND_rootbox.png" /></p>
+
+From here now we can add the goal ~(AND (AND alpha beta) gamma)~. Click on the button labeled "Add Goal".
+
+#+HTML: <p align="center"><img src="./img/MATR_add_goal_button.png" /></p>
+
+Similar to the "Add Axiom" button, this will open a new window with a text box for you to enter the goal's formula. Type "(AND (AND alpha beta) gamma)" and hit "Submit".
+#+HTML: <p align="center"><img src="./img/MATR_submit_goal.png" /></p>
+
+The result should be that the rootbox now contains two nodes for the axiom and goal respectively 
+
+#+HTML: <p align="center"><img src="./img/MATR_axiom2goal0.png" /></p>
+
+We can now begin the proof! To do so we select the "Step Proof" button
+
+#+HTML: <p align="center"><img src="./img/MATR_step_proof.png" /></p>
+
+You will see that MATR has updated the rootbox to show the first step of the proof. 
+
+#+HTML: <p align="center"><img src="./img/MATR_axiom2goal1.png" /></p>
+
+Clicking "Step Proof" again we see the next step of the proof
+
+#+HTML: <p align="center"><img src="./img/MATR_axiom2goal2.png" /></p>
+
+We at this point see a directed graph from our axiom to our goal. You'll notice that the top left button is labeled "Switch to full proof"
+
+#+HTML: <p align="center"><img src="./img/MATR_switch_to_full_proof.png" /></p>
+
+Clicking this will give the full graph of our proof.
+
+#+HTML: <p align="center"><img src="./img/MATR_full_proof.png" /></p>
+
+You also will notice that the "Switch to full proof" button changes to a "Switch to min proof" button depending on whether the current proof is in its full or minimum form. 
+
+While we're in the full proof, we may select an arbitrary node and get its proof via the "Get Node's Proof" button.
+
+#+HTML: <p align="center"><img src="./img/MATR_get_nodes_proof_button.png" /></p>
+
+Doing so will switch our mouse's pointer to a crosshair icon. We may then select the node we would like the view the proof of. For example we can view the proof of ~(AND alpha beta)~
+
+#+HTML: <p align="center"><img src="./img/MATR_get_nodes_proof_crosshair.png" /></p>
+#+HTML: <p align="center"><img src="./img/MATR_get_nodes_proof_proof.png" /></p>
+
+To return to the original proof, we can select "Switch to min proof".
+
+#+HTML: <p align="center"><img src="./img/MATR_go_back_from_nodes_proof.png" /></p>
+
+From here we can retrieve a png image of our proof with the "Export Proof to PNG" button.
+
+#+HTML: <p align="center"><img src="./img/MATR_export_to_png.png" /></p>
+
+We can also get the text output of the internal representation of our proof with unrendered latex enclosed by clicking "Proof json with latex"
+
+#+HTML: <p align="center"><img src="./img/MATR_proof_json_with_latex.png" /></p>
+
+That's it! For an animated gif demonstrating some of this process refer to [[file:./../README.org::#demonstration][Demonstration]]
+
+* License
+
+Copyright © 2019
+
+This program and the accompanying materials are made available under the
+terms of the Eclipse Public License 2.0 which is available at
+http://www.eclipse.org/legal/epl-2.0.
+
+This Source Code may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License, v. 2.0 are satisfied: GNU General Public License as published by
+the Free Software Foundation, either version 2 of the License, or (at your
+option) any later version, with the GNU Classpath Exception which is available
+at https://www.gnu.org/software/classpath/license.html.

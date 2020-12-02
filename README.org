@@ -1,0 +1,140 @@
+#+TITLE: MATR
+#+AUTHOR: Emma Griffin
+[[build][https://github.com/AMHRLab/matr-core/workflows/build/badge.svg]]
+\\
+Machina Arachne Tree-Based Reasoner (M.A.T*R or simply MATR) is a fast, extensible, and parallelized natural deduction theorem prover.
+* Contents
+- [[#about][About]]
+- [[#installation][Installation]]
+- [[#usage][Usage]]
+    - [[#livecoding][Livecoding]]
+- [[file:doc/EXAMPLE.org::#examples][Examples]]
+    - [[#demonstration][Demonstration]]
+* About
+:PROPERTIES:
+:CUSTOM_ID: about
+:END:
+MATR uses natural deduction to prove theorems. It treats formulas as tree-based symbols that can be manipulated using certain rules. MATR is given input axiom formulas and rules that it can apply to those symbols, then MATR uses these rules to prove new formulas in an attempt to prove the desired conclusions. Using natural deduction allows MATR to support higher order logic, deontic logic, many-sorted logic, situational logic, numeric logic, and most other logics not mentioned while still providing concise and readable proofs when finished.
+
+MATR is parallelized because of its codelet architecture. Codelets are the implementations of various logical rules and proof tactics. Codelets can be big or small: anything from a rule codelet that just adds simple derivations, to a prover codelet that contains a whole theorem prover and adds entire chunks of derivations at a time. Due to their independent and self contained design all codelets are run simultaneously. In addition, MATR optimizes which Codelets are run on which parts of the proof and prioritizes those that are deriving useful results.
+
+MATR is extensible because of the combination of these three properties. Firstly the speed of MATR makes it worthwhile to extend in the first place. Secondly, MATR’s natural deduction framework makes it possible to extend MATR with any type of logic, no matter how bizarre. Finally, adding functionality is as easy as making a new codelet, and the self contained design of codelets allows them to be run at the same time on the same problem and not have to worry about compatibility issues.
+
+MATR is written in a combination of Clojure and ClojureScript.
+
+Inspired by Lisp, MATR uses S-expressions to represent axioms and goals and translates these to LaTeX which is rendered on the front or backend to make proofs more readable. For example we can pass
+
+* Installation
+:PROPERTIES:
+:CUSTOM_ID: installation
+:END:
+One can download the source and compile it for execution with
+#+BEGIN_SRC shell
+    $ git clone git@github.com:AMHRLab/matr-core.git
+    $ cd matr-core/
+    $ make
+#+END_SRC
+
+The compiled application will be located in the ~target/uberjar~ folder and may be executed using
+#+BEGIN_SRC shell
+    $ java -jar target/uberjar/matr.jar
+#+END_SRC
+
+* Usage
+Upon downloading the release, or installing (and moving into ~target/uberjar~) MATR may be run as a standalone application via 
+#+BEGIN_SRC shell
+    $ java -jar matr.jar
+#+END_SRC
+
+** Livecoding
+:PROPERTIES:
+:CUSTOM_ID: livecoding
+:END:
+Livecoding is supported and has been tested using [[https://github.com/clojure-emacs/cider][cider]] for Emacs.
+
+Navigate to any file located in ~src~, for example, ~src/matr_core/core.clj~ and start an interactive session with
+#+BEGIN_SRC elisp
+    (M-x cider-jack-in-clj&cljs)
+#+END_SRC
+
+You should see something near identical to the following prompt in the repl buffer that opens automatically
+#+BEGIN_SRC clojure
+[Figwheel] Compiling build dev to "resources/public/js/compiled/matr_gui_clj.js"
+[Figwheel] Successfully compiled build dev to "resources/public/js/compiled/matr_gui_clj.js" in 5.406 seconds.
+[Figwheel] Watching paths: ("src") to compile build - dev
+[Figwheel] Starting Server at http://localhost:9500
+[Figwheel] Starting REPL
+#+END_SRC
+Upon completion, your default browser should open a new window (or tab) with ~localhost:9500~ open showing the MATR frontend. The backend of MATR (the server) will not be started yet and so the frontend will lack functionality initially.
+
+*** Figwheel-main bug
+*Note* there is a slight [[https://github.com/bhauman/figwheel-main/issues/185][bug]] involving figwheel-main attempting to open a browser indefinitely despite succeeding to do so prior. There are two easy workarounds for this issue:
+- Open your default browser prior to calling ~(M-x cider-jack-in-clj&cljs)~
+- Interrupt evaluation after receiving the prompt above (and the browser window opening with ~localhost:9500~), this will produce an error message to the repl but should work fine afterwards 
+\\
+~cider-jack-in-clj&cljs~ will create two separate repls for the interactive section. Switch from the default repl that is opened (which showed the previous prompt) to the other repl created. With the other repl opened, which should say something similar to
+#+BEGIN_SRC clojure
+WARNING: When invoking clojure.main, use -M
+nREPL server started on port 32791 on host localhost - nrepl://localhost:32791
+;; Connected to nREPL server - nrepl://localhost:32791
+;; CIDER 0.26.1 (Nesebar), nREPL 0.8.0
+;; Clojure 1.10.0, Java 11.0.9.1
+;;     Docs: (doc function-name)
+;;           (find-doc part-of-name)
+;;   Source: (source function-name)
+;;  Javadoc: (javadoc java-object-or-class)
+;;     Exit: <C-c C-q>
+;;  Results: Stored in vars *1, *2, *3, an exception in *e;
+;;  Startup: /home/emma/.local/bin/clojure -A:dev -Sdeps '{:deps {nrepl {:mvn/version "0.8.0"} cider/piggieback {:mvn/version "0.5.1"} refactor-nrepl {:mvn/version "2.5.0"} cider/cider-nrepl {:mvn/version "0.25.3"}}}' -m nrepl.cmdline --middleware '["refactor-nrepl.middleware/wrap-refactor", "cider.nrepl/cider-middleware", "cider.piggieback/wrap-cljs-repl"]'
+;;
+;; ClojureScript REPL type: figwheel-main
+;;
+user>
+#+END_SRC
+Open the Clojure(Script) file you would like to live edit and call
+#+BEGIN_SRC elisp
+    (M-x cider-eval-buffer)
+#+END_SRC
+We can then switch the repl's ns to the file we want to live code, for example, had we called ~(M-x cider-eval-buffer)~ on ~src/matr_core/core.clj~ we could then run
+#+BEGIN_SRC clojure
+user> (ns matr-core.core)
+;; => nil
+matr-core.core>
+#+END_SRC
+In this case we can test that the namespace has been properly loaded into the repl by running
+#+BEGIN_SRC clojure
+matr-core.core> db->simple-frontend-json
+;; => #function[matr-core.core/db->simple-frontend-json]
+#+END_SRC
+This is also the file we can use to start the backend server. 
+#+BEGIN_SRC clojure
+matr-core.core> (-main)
+;; => {:server
+ #object[org.eclipse.jetty.server.Server 0x30eda1e6 "Server@30eda1e6{STARTED}[9.4.12.v20180830]"],
+ :cin
+ #object[clojure.core.async.impl.channels.ManyToManyChannel 0x2d013641 "clojure.core.async.impl.channels.ManyToManyChannel@2d013641"]}
+#+END_SRC
+Upon which the frontend and backend should both be operational and ready for livecoding.
+** Demonstration
+:PROPERTIES:
+:CUSTOM_ID: demonstration
+:END:
+
+*** Setup livecoding
+#+HTML: <p align="center"><img src="./doc/img/matr1of2.gif" /></p>
+*** Prove equivalency of $\alpha \wedge (\beta \wedge gamma)$ and $(\alpha \wedge \beta) \wedge \gamma$
+#+HTML: <p align="center"><img src="./doc/img/matr2of2.gif" /></p>
+* License
+
+Copyright © 2019
+
+This program and the accompanying materials are made available under the
+terms of the Eclipse Public License 2.0 which is available at
+http://www.eclipse.org/legal/epl-2.0.
+
+This Source Code may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License, v. 2.0 are satisfied: GNU General Public License as published by
+the Free Software Foundation, either version 2 of the License, or (at your
+option) any later version, with the GNU Classpath Exception which is available
+at https://www.gnu.org/software/classpath/license.html.
