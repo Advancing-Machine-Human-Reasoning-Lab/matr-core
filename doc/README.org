@@ -1,4 +1,3 @@
-#+TITLE: MATR
 #+AUTHOR: Emma Griffin
 * Examples
 :PROPERTIES:
