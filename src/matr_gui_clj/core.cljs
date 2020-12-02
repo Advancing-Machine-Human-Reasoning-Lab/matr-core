@@ -6,7 +6,6 @@
             [cljsjs.cytoscape :as cy]
             [cljs.js]
             [antizer.reagent :as ant]
-                                        ;            [datafrisk.core :as d] 
             [matr-gui-clj.net :as net]
             [matr-gui-clj.utils :as utils]
             [matr-gui-clj.cytoscape :refer [cytoscape-instance initialize-cytoscape! layout-cytoscape! cytoscape-load-proof!]]
@@ -213,7 +212,6 @@
                            [side-nav-bar]
                            [main-content]
                            [modal]]
-                           ;[d/DataFriskShell (get @app-state :onclick-event-debug)]
                           (. js/document (getElementById "main-content-container")))
 (defn on-js-reload []
   ;; optionally touch your app-state to force rerendering depending on

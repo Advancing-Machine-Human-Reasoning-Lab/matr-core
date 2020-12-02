@@ -144,20 +144,24 @@ node.prove-source {
              (.-innerHTML (.tex2svg js/MathJax latex))))))
 
 (defn str-length->text-width [^String input]
-  (reduce + 15 (for [word (s/split input #" |(?=\()|(?=_)|(?=[{])")]
-                 (if (s/includes? word "\\")
-                   10
-                   (* (.-length word) 10)))))
+  (do (println "input is " input)
+      (reduce + 15 (for [word (s/split input #" |(?=\\)|(?=\()|(?=_)|(?=[{])|(?=\))")]
+                     (do
+                       (println "word is " word)
+                       (if (s/includes? word "\\")
+                         12
+                         (* (.-length word) 10)))))))
 
 (defn node->cytoscape-nodes [parent {id :db/id, kind :matr/kind, antecedents :matr.node/_consequents, :as node}]
   (cons
    (case kind
      :matr.kind/node
      (let [{formula :matr.node/formula flags :matr.node/flags axiom-of :matr.box/_axioms goal-of :matr.box/_goals} node
-           flags (set flags)]
+           flags (set flags)
+           latex-str (s-exp->latex formula)]
        (println formula)
        #js{:group "nodes"
-           :style #js{:background-image (latex->encoded-svg (s-exp->latex formula)) :width (str-length->text-width (s-exp->latex formula)) :height 30 :background-clip "none" :background-fit "none"}
+           :style #js{:background-image (latex->encoded-svg latex-str) :width (str-length->text-width latex-str) :height 30 :background-clip "none" :background-fit "none"}
            :data #js{:id (str id) :dbid id :parent (str parent) :matrType "node" :formula formula}
            :classes (str "content-node"
                          (if (contains? flags "checked") " checked")
