@@ -8,7 +8,7 @@ Machina Arachne Tree-Based Reasoner (M.A.T*R or simply MATR) is a fast, extensib
 - [[#installation][Installation]]
 - [[#usage][Usage]]
     - [[#livecoding][Livecoding]]
-- [[file:doc/EXAMPLE.org::#examples][Examples]]
+- [[file:doc/README.org::#examples][Examples]]
     - [[#demonstration][Demonstration]]
 * About
 :PROPERTIES:
