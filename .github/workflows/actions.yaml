@@ -24,7 +24,9 @@ jobs:
         run: make
       - name: Test
         run: OUTPUT=$(clojure -A:test -m kaocha.runner "$@" | tail -1)
+      - name: Set Error Counter
         run: echo ::set-env name=ERROR_COUNTER::$(echo $OUTPUT | rev | cut -d" " -f1 | rev)
+      - name: Test Failure
         run: echo "Test(s) failed"
         if: env.ERROR_COUNTER != '0'
   # May be worth checking out again
