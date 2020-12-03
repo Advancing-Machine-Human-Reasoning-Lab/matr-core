@@ -23,7 +23,7 @@ jobs:
       - name: Compile
         run: make
       - name: Test
-        run: echo "clojure -A:test -m kaocha.runner "$@""
+        run: clojure -A:test -m kaocha.runner "$@"
       #- name: Set Error Counter
       #  run: echo "ERROR_COUNTER=$(echo $OUTPUT | rev | cut -d" " -f1 | rev)" >> $GITHUB_ENV
       #- name: Test Failure
