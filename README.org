@@ -22,7 +22,7 @@ MATR is extensible because of the combination of these three properties. Firstly
 
 MATR is written in a combination of Clojure and ClojureScript.
 
-Inspired by Lisp, MATR uses S-expressions to represent axioms and goals and translates these to LaTeX which is rendered on the front or backend to make proofs more readable. For example we can pass
+Inspired by Lisp, MATR uses S-expressions to represent axioms and goals and translates these to LaTeX which is rendered on the front or backend to make proofs more readable.
 
 * Installation
 :PROPERTIES:
@@ -122,7 +122,7 @@ Upon which the frontend and backend should both be operational and ready for liv
 
 *** Setup livecoding
 #+HTML: <p align="center"><img src="./doc/img/matr1of2.gif" /></p>
-*** Prove equivalency of \alpha \wedge (\beta \wedge gamma) and (\alpha \wedge \beta) \wedge \gamma
+*** Prove equivalency of \alpha \wedge (\beta \wedge \gamma) and (\alpha \wedge \beta) \wedge \gamma
 #+HTML: <p align="center"><img src="./doc/img/matr2of2.gif" /></p>
 * License
 
