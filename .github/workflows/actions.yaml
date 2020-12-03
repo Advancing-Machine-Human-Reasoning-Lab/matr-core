@@ -26,3 +26,8 @@ jobs:
   run-tests:
     runs-on: ubuntu-latest
     steps:
+      - uses: liquidz/babashka-test-action@v1
+        with:
+          source-paths: 'src'
+          test-paths: 'test'
+          test-file-pattern: '_test.clj$'
