@@ -29,5 +29,5 @@ jobs:
       - uses: liquidz/babashka-test-action@v1
         with:
           source-paths: 'src'
-          test-paths: 'test'
+          test-paths: 'test/matr_core'
           test-file-pattern: '_test.clj$'
