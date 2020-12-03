@@ -23,7 +23,10 @@ jobs:
       - name: Compile
         run: make
       - name: Test
-        run: clojure -A:test -m kaocha.runner "$@"
+        run: OUTPUT=$(clojure -A:test -m kaocha.runner "$@" | tail -1)
+        run: echo ::set-env name=ERROR_COUNTER::$(echo $OUTPUT | rev | cut -d" " -f1 | rev)
+        run: echo "Test(s) failed"
+        if: env.ERROR_COUNTER != '0'
   # May be worth checking out again
   #run-tests:
   #  runs-on: ubuntu-latest
