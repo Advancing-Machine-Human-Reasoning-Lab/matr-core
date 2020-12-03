@@ -1,6 +1,6 @@
 #+TITLE: MATR
 #+AUTHOR: Emma Griffin
-[[build][https://github.com/AMHRLab/matr-core/workflows/build/badge.svg]]
+[[build][https://github.com/AMHRLab/matr-core/workflows/build/badge.svg?branch=develop]]
 \\
 Machina Arachne Tree-Based Reasoner (M.A.T*R or simply MATR) is a fast, extensible, and parallelized natural deduction theorem prover.
 * Contents
