@@ -5,6 +5,11 @@
 
 (declare s-exp->fn-m s-exp->fn s-exp->latex get-fn)
 
+(defn length [^String string]
+  "Use either Java or JS built in string length"
+  #?(:clj  (.length string)
+     :cljs (.-length string)))
+
 ;; Test strings/axioms
 (def axioms ["(EXISTS2 psi (PROVES PA (IFF psi (NOT (Proves (QB psi))))))"
              "(FORALL2 psi (AND (PROVES PA (Opposite (QB psi) (QB (NOT psi)))) (Opposite (QB psi) (QB (NOT psi)))))"
@@ -20,8 +25,8 @@
 (defn detect-paren-loss
   "Returns single closing paren if read-string drops closing paren due to not finding a matching open paren. Necessary for handling when an s-expression is split into two strings such that the outer pair of parens is no longer contained within a single string."
   [^String sym]
-  (if (and (= (.-length (str (read-string sym)))
-              (dec (.-length sym)))
+  (if (and (= (length (str (read-string sym)))
+              (dec (length sym)))
            (= (last sym) \)))
     ")"
     ""))
@@ -29,8 +34,8 @@
 (defn paren-loss?
   "Returns single closing paren if read-string drops closing paren due to not finding a matching open paren. Necessary for handling when an s-expression is split into two strings such that the outer pair of parens is no longer contained within a single string."
   [^String sym]
-  (true? (and (= (.-length (str (read-string sym)))
-                 (dec (.-length sym)))
+  (true? (and (= (length (str (read-string sym)))
+                 (dec (length sym)))
               (= (last sym) \)))))
 
 (defn ends-in-urcorner? [^String sym]
@@ -48,7 +53,7 @@
 (defn strip-first+last
   "Takes in string and returns substring with first and last indices removed."
   [^String string]
-  (subs string 1 (dec (.-length string))))
+  (subs string 1 (dec (length string))))
 
 (defn strip-outer-braces
   "Takes in string and returns substring with outer-most enclosing curly braces removed. Curly braces need not surround entire expression or be the beginning or end of string. If multiple non-nested curly braces exist, function will fail to remove proper pair, though function will work properly if all curly brace pairs are nested within each other."
@@ -287,7 +292,7 @@
   (let [s-exp (read-string s-exp-s) ; convert string->list
         first-arg (str (second s-exp)) ; underscore for exists
         full-rem-args (str (rest (rest s-exp))) ; extra pair of parens
-        trimmed-rem-args (subs full-rem-args 1 (dec (.-length full-rem-args)))]
+        trimmed-rem-args (subs full-rem-args 1 (dec (length full-rem-args)))]
     (list (str latex-cmd "{" (s-exp->latex first-arg true) "} ") trimmed-rem-args)))
 
 (defn exists2->latex
@@ -309,7 +314,7 @@
   (let [s-exp (read-string s-exp-s) ; convert string->list
         first-arg (str (second s-exp))
         full-rem-args (str (rest (rest s-exp))) ; extra pair of parens
-        trimmed-rem-args (subs full-rem-args 1 (dec (.-length full-rem-args)))]
+        trimmed-rem-args (subs full-rem-args 1 (dec (length full-rem-args)))]
     (list (str latex-cmd " (" (s-exp->latex first-arg true) ", ") (str trimmed-rem-args ")"))))
 
 (defn PROVES->latex
