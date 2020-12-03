@@ -28,7 +28,7 @@ jobs:
         run: echo "ERROR_COUNTER=$(echo $OUTPUT | rev | cut -d" " -f1 | rev)" >> $GITHUB_ENV
       - name: Test Failure
         run: echo "Test(s) failed"
-        if: $ERROR_COUNTER != '0'
+        if: env.ERROR_COUNTER != '0'
   # May be worth checking out again
   #run-tests:
   #  runs-on: ubuntu-latest
