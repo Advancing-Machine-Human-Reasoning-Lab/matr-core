@@ -137,19 +137,27 @@ node.prove-source {
       print-str))
 
 ;; Added 03/04/20
-(defn latex->encoded-svg [^String latex]
+(defn latex->encoded-svg
+  "Convert string of plain-text represented LaTeX into an svg file."
+  [^String latex]
   (str "data:image/svg+xml;charset=utf-8,"
        (js/encodeURIComponent
         (str "<?xml version=\"1.0\" encoding=\"ISO-8859-1\" standalone=\"no\"?>"
              (.-innerHTML (.tex2svg js/MathJax latex))))))
 
-(defn str-length->text-width [^String input]
+(defn str-length->text-width
+  "Heuristic for approximating the necessary width to display S-expressions
+   converted to LaTeX text within an svg file."
+  [^String input]
   (reduce + 15 (for [word (s/split input #" |(?=\\)|(?=\()|(?=_)|(?=[{])|(?=\))")]
                  (if (s/includes? word "\\")
                    12
                    (* (.-length word) 10)))))
 
-(defn node->cytoscape-nodes [parent {id :db/id, kind :matr/kind, antecedents :matr.node/_consequents, :as node}]
+(defn node->cytoscape-nodes
+  "Convert node in server's (datascript) database to a node in cytoscape for
+   displaying on MATR's site"
+  [parent {id :db/id, kind :matr/kind, antecedents :matr.node/_consequents, :as node}]
   (cons
    (case kind
      :matr.kind/node

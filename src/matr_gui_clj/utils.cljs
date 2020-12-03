@@ -25,7 +25,10 @@
   (swap! app-state assoc-in [:error :title] title)
   (swap! app-state assoc-in [:error :message] message))
 
-(defn axiom-submit [formula]
+(defn axiom-submit
+  "Submit the user's axiom formula if it is parsed as a valid-formula,
+   otherwise inform the user it is invalid"
+  [formula]
   (let [valid-formula? (net/check-formula formula)]
     (swap! app-state assoc-in [:modal-data :formula-valid?] valid-formula?)
     (if valid-formula?
@@ -86,13 +89,13 @@
 
 (defn add-axiom [e app-state]
   (swap! app-state assoc :modal-show true)
-  (swap! app-state assoc :modal-title "Node")
+  (swap! app-state assoc :modal-title "Add Axiom")
   (swap! app-state assoc :modal-selection "add-node")
   (swap! app-state assoc :node-submit-func net/send-axiom!))
 
 (defn add-goal [e app-state]
   (swap! app-state assoc :modal-show true)
-  (swap! app-state assoc :modal-title "Node")
+  (swap! app-state assoc :modal-title "Add Goal")
   (swap! app-state assoc :modal-selection "add-node")
   (swap! app-state assoc :node-submit-func net/send-goal!))
 

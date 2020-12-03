@@ -21,7 +21,9 @@
     (cytoscape-load-proof! (:body (<! (net/get-proof))))
     (layout-cytoscape!)))
 
-(defn add-node-form [display-buttons?]
+(defn add-node-form
+  "Format for the 'Add Node' button on the MATR site."
+  [display-buttons?]
   (fn []
     (let [form (ant/get-form)
           form-style {:label-col {:span 3}
@@ -62,7 +64,10 @@
                                      (swap! app-state assoc :modal-show false))}
              "Cancel"]]]])])))
 
-(defn upload-config-form []
+(defn upload-config-form
+  "Format for uploading a config file through the pop-up window that displays
+   upon clicking 'Upload Config'"
+  []
   (let [file (atom nil)]
     (fn []
       (let [form (ant/get-form)
@@ -126,6 +131,8 @@
 
 
 (defn side-nav-bar-btn
+  "Templates for displaying and interacting with buttons on the side of the
+   side nav bar of the MATR site."
   ([label btn-class]
   [:li {:class "list-item"}
    [ant/button {:class (clojure.string/join " " ["nav-pill" "nav-link" btn-class])
@@ -145,6 +152,8 @@
                              (clickfunc e app-state))} label]]))
 
 (defn side-nav-bar
+  "Side nav bar displayed on front end of MATR site which showcases the
+   different buttons for interacting with MATR."
   []
   [:nav {:id "side-nav"
          :class "flex-column"}

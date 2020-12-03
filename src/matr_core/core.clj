@@ -22,6 +22,7 @@
   (:gen-class))
 
 (defn db->simple-frontend-json
+  "Convert datascript database to JSON"
   [db minimal]
   (let [db (if minimal (db-restricted db (extract-proof-eids db)) db)]
     (d/pull db '[:db/id :matr.box/parent :matr.box/logic
@@ -184,7 +185,12 @@
 (def -main (do (println "server started")
                start-server!))
 
-(defn make-example-db []
+;; Type mismatch between Atoms and Agents.
+;; Dispatch issue with 'null' value when attempting to
+;; substitute (db/make-initial-db) for (d/create-conn schema)
+(defn make-example-db
+  []
+  "Make simple datascript database for testing."
   (let [db (d/create-conn schema)]
     (transact! db [{:matr/kind :matr.kind/box}
                    [:db.fn/call #'matr-core.actions/actions->datoms
