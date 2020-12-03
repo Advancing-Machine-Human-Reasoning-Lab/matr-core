@@ -23,12 +23,12 @@ jobs:
       - name: Compile
         run: make
       - name: Test
-        run: OUTPUT=$(clojure -A:test -m kaocha.runner "$@" | tail -1)
+        run: echo "OUTPUT=$(clojure -A:test -m kaocha.runner "$@" | tail -1)" >> $GITHUB_ENV
       - name: Set Error Counter
-        run: echo ::set-env name=ERROR_COUNTER::$(echo $OUTPUT | rev | cut -d" " -f1 | rev)
+        run: echo "ERROR_COUNTER=$(echo $OUTPUT | rev | cut -d" " -f1 | rev)" >> $GITHUB_ENV
       - name: Test Failure
         run: echo "Test(s) failed"
-        if: env.ERROR_COUNTER != '0'
+        if: $ERROR_COUNTER != '0'
   # May be worth checking out again
   #run-tests:
   #  runs-on: ubuntu-latest
