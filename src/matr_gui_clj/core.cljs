@@ -222,6 +222,31 @@
                            [main-content]
                            [modal]]
                           (. js/document (getElementById "main-content-container")))
+
+(defn zoom [f]
+  (.zoom @cytoscape-instance
+         #js{:level (f (.zoom @cytoscape-instance))
+             :position (.position
+                        (.getElementById
+                         @cytoscape-instance
+                         "mainWorkspace"))}))
+
+(defn zoom-in [] (zoom inc))
+
+(defn zoom-out [] (zoom dec))
+
+(defn fit-to-view [] (.fit @cytoscape-instance))
+
+(defn load-event []
+  (.addEventListener
+   (.getElementById js/document "zoom-in-btn") "click" zoom-in)
+  (.addEventListener
+   (.getElementById js/document "zoom-out-btn") "click" zoom-out)
+  (.addEventListener
+   (.getElementById js/document "fit-to-view-btn") "click" fit-to-view))
+
+(.addEventListener js/window "load" load-event false)
+
 (defn on-js-reload []
   ;; optionally touch your app-state to force rerendering depending on
   ;; your application

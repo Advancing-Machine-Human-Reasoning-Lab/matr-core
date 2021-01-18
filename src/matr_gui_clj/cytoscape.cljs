@@ -136,7 +136,6 @@ node.prove-source {
       replace-head-syms
       print-str))
 
-;; Added 03/04/20
 (defn latex->encoded-svg
   "Convert string of plain-text represented LaTeX into an svg file."
   [^String latex]
