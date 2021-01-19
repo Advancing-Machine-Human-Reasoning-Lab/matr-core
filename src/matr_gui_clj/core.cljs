@@ -223,7 +223,9 @@
                            [modal]]
                           (. js/document (getElementById "main-content-container")))
 
-(defn zoom [f]
+(defn zoom
+  "Zooms into 'mainWorkspace' according to applying f to current zoom value."
+  [f]
   (.zoom @cytoscape-instance
          #js{:level (f (.zoom @cytoscape-instance))
              :position (.position
@@ -231,13 +233,24 @@
                          @cytoscape-instance
                          "mainWorkspace"))}))
 
-(defn zoom-in [] (zoom inc))
+(defn zoom-in
+  "Zoom into 'mainWorkspace' by a factor of 1"
+  []
+  (zoom inc))
 
-(defn zoom-out [] (zoom dec))
+(defn zoom-out
+  "Zoom out of 'mainWorkspace' by a factor of 1"
+  []
+  (zoom dec))
 
-(defn fit-to-view [] (.fit @cytoscape-instance))
+(defn fit-to-view
+  "Zoom 'mainWorkspace' to fit current view"
+  []
+  (.fit @cytoscape-instance))
 
-(defn load-event []
+(defn load-event
+  "Add listeners for bottom-nav buttons"
+  []
   (.addEventListener
    (.getElementById js/document "zoom-in-btn") "click" zoom-in)
   (.addEventListener
@@ -245,6 +258,7 @@
   (.addEventListener
    (.getElementById js/document "fit-to-view-btn") "click" fit-to-view))
 
+;; Load listeners for bottom-nav buttons
 (.addEventListener js/window "load" load-event false)
 
 (defn on-js-reload []
